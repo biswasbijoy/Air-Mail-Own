@@ -1,33 +1,46 @@
 import 'package:flutter/material.dart';
 
-class GameFunctionTic extends StatefulWidget {
-  const GameFunctionTic({Key? key}) : super(key: key);
-
-  @override
-  _GameFunctionTicState createState() => _GameFunctionTicState();
+Widget gameHeader(String title) {
+  return Container(
+    margin: const EdgeInsets.all(20),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: Color(0xfafafa),
+      ),
+      textAlign: TextAlign.center,
+    ),
+  );
 }
 
-class _GameFunctionTicState extends State<GameFunctionTic> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Tic Tac Toe'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.blueAccent,
-                Colors.redAccent,
-                Colors.purple,
-              ],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
+Widget cellBuilder(BuildContext context, int index, VoidCallback onTap) {
+  return Expanded(
+    child: Container(
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Color(0x2a2a3a),
+        border: Border.all(color: Color(0x55ffffff)),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Center(
+            child: Text(
+              '',
+              style: TextStyle(
+                fontSize: 40,
+                color: Color(0x00d4aa),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

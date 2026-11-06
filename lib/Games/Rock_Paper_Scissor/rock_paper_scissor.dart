@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'game_function.dart';
-
 class RockPaperScissor extends StatelessWidget {
   const RockPaperScissor({Key? key}) : super(key: key);
 
@@ -9,23 +7,16 @@ class RockPaperScissor extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.blueAccent,
-                Colors.redAccent,
-                Colors.purple,
-              ],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
-            ),
-          ),
-        ),
-        title: Text('Rock Paper Scissor'),
-        centerTitle: true,
+        title: const Text('Rock Paper Scissors'),
+        backgroundColor: Color(0x00d4aa),
+        foregroundColor: Colors.black,
       ),
-      body: GameFunction(),
+      body: const Center(
+        child: Text(
+          'Rock Paper Scissors Game',
+          style: TextStyle(fontSize: 24, color: Colors.white),
+        ),
+      ),
     );
   }
 }

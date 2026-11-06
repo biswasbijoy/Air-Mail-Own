@@ -1,5 +1,5 @@
-import 'package:airmail/Model/chat_model.dart';
 import 'package:flutter/material.dart';
+import 'package:airmail/Model/chat_model.dart';
 
 class ContactCard extends StatelessWidget {
   const ContactCard({Key? key, required this.contact}) : super(key: key);
@@ -17,11 +17,11 @@ class ContactCard extends StatelessWidget {
         title: Text(
           contact.name,
           style: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+              fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xfafafa)),
         ),
         subtitle: Text(
           contact.status,
-          style: TextStyle(fontSize: 13, color: Colors.white),
+          style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
         ),
       ),
     );

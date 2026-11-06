@@ -1,36 +1,29 @@
-import 'package:airmail/size_config.dart';
 import 'package:flutter/material.dart';
 
-class SplashContent extends StatelessWidget {
-  const SplashContent({
+class SplashContents extends StatelessWidget {
+  const SplashContents({
     Key? key,
-    required this.text,
-    required this.image,
   }) : super(key: key);
-  final String text, image;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: <Widget>[
-        Spacer(),
-        Text(
-          "TOKOTO",
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Welcome to',
           style: TextStyle(
-            fontSize: getProportionateScreenWidth(36),
-            color: Color(0xFFFF7643),
-            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Color(0x88ffffff),
           ),
         ),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-        ),
-        Spacer(flex: 2),
-        Image.asset(
-          image,
-          height: getProportionateScreenHeight(265),
-          width: getProportionateScreenWidth(235),
+        const Text(
+          'AirMail',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            color: Color(0xfafafa),
+          ),
         ),
       ],
     );

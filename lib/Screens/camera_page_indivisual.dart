@@ -1,4 +1,3 @@
-import 'package:airmail/Screens/camera_screen.dart';
 import 'package:flutter/material.dart';
 
 class CameraIndivisual extends StatelessWidget {
@@ -8,7 +7,7 @@ class CameraIndivisual extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Take a photo',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
@@ -16,9 +15,9 @@ class CameraIndivisual extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Colors.blueAccent,
-                Colors.redAccent,
-                Colors.purple,
+                Color(0x0f0f1a),
+                Color(0x1a1a2e),
+                Color(0x25253b),
               ],
               begin: Alignment.bottomRight,
               end: Alignment.topLeft,
@@ -26,7 +25,9 @@ class CameraIndivisual extends StatelessWidget {
           ),
         ),
       ),
-      body: CameraScreen(),
+      body: Container(
+        color: const Color(0x08080c),
+      ),
     );
   }
 }

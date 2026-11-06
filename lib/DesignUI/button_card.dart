@@ -1,4 +1,3 @@
-import 'package:airmail/Model/chat_model.dart';
 import 'package:flutter/material.dart';
 
 class ButtonCard extends StatelessWidget {
@@ -15,14 +14,14 @@ class ButtonCard extends StatelessWidget {
         child: Icon(
           icon,
           size: 35,
-          color: Colors.white,
+          color: Colors.black,
         ),
-        backgroundColor: Colors.purpleAccent,
+        backgroundColor: Color(0x00d4aa),
       ),
       title: Text(
         name,
         style: TextStyle(
-            fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+            fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
       ),
     );
   }

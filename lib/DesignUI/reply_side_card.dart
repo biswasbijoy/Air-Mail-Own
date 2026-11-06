@@ -6,38 +6,65 @@ class ReplyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width - 45,
-        ),
-        child: Card(
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 15,
+            backgroundColor: Color(0x1a1a25),
+            child: Icon(
+              Icons.person,
+              color: Color(0x00d4aa),
+              size: 16,
+            ),
           ),
-          color: Colors.orange[600],
-          margin: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 10, right: 60, top: 4, bottom: 20),
-                child: Text(
-                  message,
-                  style: TextStyle(fontSize: 20, color: Colors.white),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Color(0x2a2a3a),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
                 ),
               ),
-              Positioned(
-                bottom: 4,
-                right: 6,
-                child: Text(
-                  '12.23',
-                  style: TextStyle(fontSize: 15, color: Colors.white),
-                ),
-              )
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class OwnMessageCard extends StatelessWidget {
+  const OwnMessageCard({Key? key, required this.message}) : super(key: key);
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Color(0x00d4aa),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            message,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),

@@ -54,50 +54,43 @@ class _CallScreenState extends State<CallScreen> {
       )
     ];
     return Scaffold(
-      backgroundColor: Colors.indigoAccent,
+      backgroundColor: const Color(0x08080c),
       body: ListView.builder(
         itemCount: calls.length,
         itemBuilder: (context, index) {
-          return callCard(calls[index].name, Icons.call_missed_outgoing,
-              Colors.red, "10:00 AM", calls[index].icon);
+          return Card(
+            color: const Color(0x1a1a25),
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                radius: 25,
+                backgroundImage: AssetImage(calls[index].icon),
+              ),
+              title: Text(calls[index].name,
+                  style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white)),
+              subtitle: Row(
+                children: [
+                  Icon(Icons.call_missed_outgoing,
+                      color: Color(0x00d4aa),
+                      size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    "10:00 AM",
+                    style: const TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
+                  ),
+                ],
+              ),
+              trailing: Icon(
+                Icons.call,
+                size: 25,
+                color: Color(0xfafafa),
+              ),
+            ),
+          );
         },
-      ),
-    );
-  }
-
-  Widget callCard(
-      String name, IconData icon, Color color, String time, String img) {
-    return Card(
-      color: Colors.indigoAccent,
-      margin: EdgeInsets.only(bottom: 0.5),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 25,
-          backgroundImage: AssetImage(img),
-        ),
-        title: Text(name,
-            style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w500,
-                color: Colors.white)),
-        subtitle: Row(
-          children: [
-            Icon(
-              icon,
-              color: color,
-            ),
-            SizedBox(width: 6),
-            Text(
-              time,
-              style: TextStyle(fontSize: 13, color: Colors.white),
-            ),
-          ],
-        ),
-        trailing: Icon(
-          Icons.call,
-          size: 25,
-          color: Colors.white,
-        ),
       ),
     );
   }

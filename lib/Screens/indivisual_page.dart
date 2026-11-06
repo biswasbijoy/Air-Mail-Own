@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:airmail/Model/message_model.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io.dart' as IO;
 import 'package:airmail/DesignUI/reply_side_card.dart';
 import 'package:airmail/DesignUI/user_side_card.dart';
 import 'package:airmail/Model/chat_model.dart';
@@ -7,6 +8,7 @@ import 'package:airmail/Screens/camera_page_indivisual.dart';
 // import 'package:airmail/Screens/camera_screen.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class IndivisualPage extends StatefulWidget {
   const IndivisualPage(
@@ -16,7 +18,7 @@ class IndivisualPage extends StatefulWidget {
   final ChatModel sourceChat;
 
   @override
-  _IndivisualPageState createState() => _IndivisualPageState();
+  State<IndivisualPage> createState() => _IndivisualPageState();
 }
 
 class _IndivisualPageState extends State<IndivisualPage> {
@@ -27,11 +29,15 @@ class _IndivisualPageState extends State<IndivisualPage> {
   List<MessageModel> messages = [];
 
   TextEditingController _controller = TextEditingController();
+  String? _token;
+  String? _currentUserId;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    connect();
+    _token = '';
+    _currentUserId = 'current_user';
     focusNode.addListener(
       () {
         if (focusNode.hasFocus) {
@@ -43,9 +49,10 @@ class _IndivisualPageState extends State<IndivisualPage> {
         }
       },
     );
+    _connectSocket();
   }
 
-  void connect() {
+  void _connectSocket() {
     socket = IO.io(
       'http://192.168.0.120:5000',
       <String, dynamic>{
@@ -54,37 +61,53 @@ class _IndivisualPageState extends State<IndivisualPage> {
       },
     );
     socket.connect();
-    socket.onConnect(
-      (data) {
-        print('connected');
-        socket.on("message", (msg) {
-          print(msg);
-          setMessage("destination", msg["message"]);
-        });
-      },
-    );
+    socket.onConnect((data) {
+      print('connected');
+      socket.on("message", (msg) {
+        print(msg);
+        setMessage("destination", msg["message"]);
+      });
+    });
     print(socket.connected);
     socket.emit("signin", widget.sourceChat.id);
   }
 
-  void sendMessage(String message, var sourceId, var targetId) {
-    setMessage("source", message);
-    socket.emit("message",
-        {"message": message, "sourceId": sourceId, "targetId": targetId});
+  void _sendMessageToBackend(String message) async {
+    if (_token != null && _currentUserId != null) {
+      try {
+        final response = await http.post(
+          Uri.parse('http://10.0.2.2:5000/api/messages'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+          body: json.encode({
+            'senderId': _currentUserId,
+            'receiverId': widget.chatModel.id,
+            'message': message,
+          }),
+        );
+        if (response.statusCode != 200) {
+          print('Failed to save message to backend: ${response.body}');
+        }
+      } catch (e) {
+        print('Error saving message: $e');
+      }
+    }
   }
 
-  void setMessage(String type, String message) {
-    MessageModel messageModel = MessageModel(
-      type: type,
-      message: message,
-    );
-    setState(
-      () {
-        setState(() {
-          messages.add(messageModel);
-        });
-      },
-    );
+  void _sendMessage(String message) {
+    // Send via Socket.IO
+    socket.emit("message",
+        {"message": message, "sourceId": _currentUserId, "targetId": widget.chatModel.id});
+
+    // Also save to backend
+    _sendMessageToBackend(message);
+
+    setState(() {
+      _controller.clear();
+      sendButton = false;
+    });
   }
 
   @override
@@ -112,6 +135,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                     Icon(
                       Icons.arrow_back,
                       size: 24,
+                      color: Colors.white,
                     ),
                     CircleAvatar(
                       radius: 20,
@@ -130,10 +154,11 @@ class _IndivisualPageState extends State<IndivisualPage> {
                     children: [
                       Text(widget.chatModel.name,
                           style: TextStyle(
-                              fontSize: 18.5, fontWeight: FontWeight.bold)),
+                              fontSize: 18.5, fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                       Text(
                         "Last seen today at ${widget.chatModel.time}",
-                        style: TextStyle(fontSize: 13, color: Colors.white),
+                        style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
                       ),
                     ],
                   ),
@@ -143,9 +168,9 @@ class _IndivisualPageState extends State<IndivisualPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.blueAccent,
-                      Colors.redAccent,
-                      Colors.purple,
+                      Color(0x0f0f1a),
+                      Color(0x1a1a2e),
+                      Color(0x25253b),
                     ],
                     begin: Alignment.bottomRight,
                     end: Alignment.topLeft,
@@ -154,11 +179,11 @@ class _IndivisualPageState extends State<IndivisualPage> {
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.call),
+                  icon: Icon(Icons.call, color: Color(0x00d4aa)),
                   onPressed: () {},
                 ),
                 IconButton(
-                  icon: Icon(Icons.videocam),
+                  icon: Icon(Icons.videocam, color: Color(0x00d4aa)),
                   onPressed: () {},
                 ),
                 PopupMenuButton<String>(
@@ -242,7 +267,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                                   },
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: "Type a message",
+                    hintText: "Type a message",
                                     contentPadding: EdgeInsets.all(5),
                                     prefixIcon: IconButton(
                                       onPressed: () {
@@ -255,7 +280,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                                         );
                                       },
                                       icon: Icon(Icons.emoji_emotions),
-                                      color: Colors.purpleAccent[400],
+                                      color: Color(0x00d4aa),
                                     ),
                                     suffixIcon: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -270,7 +295,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                                                     bottomsheet());
                                           },
                                           icon: Icon(Icons.attach_file),
-                                          color: Colors.purpleAccent[400],
+                                          color: Color(0x00d4aa),
                                         ),
                                         IconButton(
                                           onPressed: () {
@@ -283,7 +308,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                                             );
                                           },
                                           icon: Icon(Icons.camera_alt),
-                                          color: Colors.purpleAccent[400],
+                                          color: Color(0x00d4aa),
                                         ),
                                       ],
                                     ),
@@ -296,20 +321,15 @@ class _IndivisualPageState extends State<IndivisualPage> {
                                   const EdgeInsets.only(bottom: 8, right: 2),
                               child: CircleAvatar(
                                 radius: 25,
-                                backgroundColor: Colors.purpleAccent[400],
+                                backgroundColor: Color(0x00d4aa),
                                 child: IconButton(
                                   icon: Icon(
                                     sendButton ? Icons.send : Icons.mic,
-                                    color: Colors.white,
+                                    color: Colors.black,
                                   ),
                                   onPressed: () {
                                     if (sendButton) {
-                                      sendMessage(
-                                        _controller.text,
-                                        widget.sourceChat.id,
-                                        widget.chatModel.id,
-                                      );
-                                      _controller.clear();
+                                      _sendMessage(_controller.text);
                                     }
                                   },
                                 ),
@@ -355,28 +375,28 @@ class _IndivisualPageState extends State<IndivisualPage> {
                 children: [
                   iconcreation(
                     Icons.insert_drive_file,
-                    Colors.indigo,
+                    Color(0x00d4aa),
                     "Document",
                   ),
-                  SizedBox(
+                  const SizedBox(
                     width: 40,
                   ),
                   iconcreation(
                     Icons.camera_alt,
-                    Colors.pink,
+                    Color(0xff6b6b),
                     "Camera",
                   ),
-                  SizedBox(
+                  const SizedBox(
                     width: 40,
                   ),
                   iconcreation(
                     Icons.insert_photo,
-                    Colors.purple,
+                    Color(0x00d4aa),
                     "Gallery",
                   ),
                 ],
               ),
-              SizedBox(
+              const SizedBox(
                 height: 30,
               ),
               Row(
@@ -384,23 +404,23 @@ class _IndivisualPageState extends State<IndivisualPage> {
                 children: [
                   iconcreation(
                     Icons.audiotrack,
-                    Colors.orange,
+                    Color(0xff6b6b),
                     "Audio",
                   ),
-                  SizedBox(
+                  const SizedBox(
                     width: 40,
                   ),
                   iconcreation(
                     Icons.location_pin,
-                    Colors.pink,
+                    Color(0x00d4aa),
                     "Location",
                   ),
-                  SizedBox(
+                  const SizedBox(
                     width: 40,
                   ),
                   iconcreation(
                     Icons.person,
-                    Colors.blue,
+                    Color(0xff6b6b),
                     "Contact",
                   ),
                 ],
@@ -422,35 +442,34 @@ class _IndivisualPageState extends State<IndivisualPage> {
           child: Icon(
             icon,
             size: 29,
-            color: Colors.white,
+            color: Colors.black,
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 5,
         ),
         Text(
           text,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 13,
           ),
         ),
       ]),
-    );
+    ]);
   }
 
   Widget emojiSelect() {
     return Expanded(
       child: EmojiPicker(
-        onEmojiSelected: (Category category, Emoji emoji) {
+        onEmojiSelected: (Category? category, Emoji? emoji) {
           setState(() {
-            _controller.text = _controller.text + emoji.emoji;
+            _controller.text = _controller.text + emoji!.emoji;
           });
-          config:
-          Config(
-            columns: 5,
-            verticalSpacing: 4,
-          );
         },
+        config: Config(
+          columns: 5,
+          verticalSpacing: 4,
+        ),
       ),
     );
   }

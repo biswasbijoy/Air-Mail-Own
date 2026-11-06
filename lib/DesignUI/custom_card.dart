@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Screens/indivisual_page.dart';
-import 'package:flutter/material.dart';
 
 class CustomCard extends StatelessWidget {
   const CustomCard(
@@ -35,20 +35,20 @@ class CustomCard extends StatelessWidget {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                  color: Color(0xfafafa)),
             ),
             subtitle: Row(
               children: [
-                Icon(Icons.done_all, color: Colors.white, size: 16),
+                Icon(Icons.done_all, color: Color(0x00d4aa), size: 16),
                 Text(
                   chatModel.currentMessage,
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  style: TextStyle(fontSize: 16, color: Color(0xa0a0a0)),
                 ),
               ],
             ),
             trailing: Text(
               chatModel.time,
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Color(0xa0a0a0)),
             ),
           ),
         ],

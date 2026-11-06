@@ -9,7 +9,7 @@ class DrawerComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0x08080c),
       child: ListView(
         children: [
           DrawerHeader(
@@ -17,7 +17,6 @@ class DrawerComponent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Spacer(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -30,18 +29,19 @@ class DrawerComponent extends StatelessWidget {
                 Spacer(),
                 Text(
                   'Bijoy Biswas',
-                  style: TextStyle(fontSize: 19),
+                  style: TextStyle(fontSize: 19, color: Colors.white),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       '+8801751990907',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Color(0xa0a0a0)),
                     ),
                     IconButton(
                         onPressed: () {},
-                        icon: Icon(Icons.arrow_drop_down_circle_sharp))
+                        icon: Icon(Icons.arrow_drop_down_circle_sharp,
+                            color: Color(0xa0a0a0)))
                   ],
                 ),
               ],
@@ -49,9 +49,8 @@ class DrawerComponent extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.blueAccent,
-                  Colors.redAccent,
-                  Colors.purple,
+                  Color(0x0f0f1a),
+                  Color(0x1a1a2e),
                 ],
                 begin: Alignment.bottomRight,
                 end: Alignment.topLeft,
@@ -59,40 +58,40 @@ class DrawerComponent extends StatelessWidget {
             ),
           ),
           ListTile(
-            leading: Icon(Icons.bookmark_border_outlined),
+            leading: Icon(Icons.bookmark_border_outlined, color: Color(0xa0a0a0)),
             title: Text(
               'Saved Message',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.settings_outlined),
+            leading: Icon(Icons.settings_outlined, color: Color(0xa0a0a0)),
             title: Text(
               'Settings',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.person_add_alt_outlined),
+            leading: Icon(Icons.person_add_alt_outlined, color: Color(0xa0a0a0)),
             title: Text(
               'Invite Friends',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.help_outline_outlined),
+            leading: Icon(Icons.help_outline_outlined, color: Color(0xa0a0a0)),
             title: Text(
               'AirMails Features',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (context) => DeveloperScreen())),
-            leading: Icon(Icons.person),
+            leading: Icon(Icons.person, color: Color(0x00d4aa)),
             title: Text(
               'Developer Contact',
-              style: TextStyle(color: Colors.cyan, fontSize: 18),
+              style: TextStyle(color: Color(0x00d4aa), fontSize: 18),
             ),
           ),
         ],

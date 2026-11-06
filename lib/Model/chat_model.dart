@@ -5,6 +5,7 @@ class ChatModel {
   var status;
   var currentMessage;
   var id;
+  String? email;
   ChatModel({
     required this.name,
     this.icon,
@@ -12,5 +13,6 @@ class ChatModel {
     this.status,
     this.currentMessage,
     this.id,
+    this.email,
   });
 }

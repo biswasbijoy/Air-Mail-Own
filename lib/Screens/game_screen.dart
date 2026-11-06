@@ -7,12 +7,13 @@ class GameScreen extends StatefulWidget {
   const GameScreen({Key? key}) : super(key: key);
 
   @override
-  _GameScreenState createState() => _GameScreenState();
+  State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.indigoAccent,
       body: ListView(
@@ -22,60 +23,57 @@ class _GameScreenState extends State<GameScreen> {
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => RockPaperScissor()));
             },
-            child: CardContants(
-                "assets/images/rock_paper_scissor.png", "Rock Paper Scissor"),
+            child: CardContants(context, "assets/images/rock_paper_scissor.png", "Rock Paper Scissor"),
           ),
           InkWell(
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => TicTacToy()));
+                    MaterialPageRoute(builder: (context) => TicTacToe()));
               },
-              child:
-                  CardContants("assets/images/tic_tac_toe.png", "Tic Tac Toe")),
+              child: CardContants(context, "assets/images/tic_tac_toe.png", "Tic Tac Toe")),
           InkWell(
               onTap: () {
                 Navigator.push(context,
                     MaterialPageRoute(builder: (context) => ColorGuess()));
               },
-              child: CardContants(
-                  "assets/images/color_guessing.png", "Guess the Color")),
+              child: CardContants(context, "assets/images/color_guessing.png", "Guess the Color")),
         ],
       ),
     );
   }
+}
 
-  Widget CardContants(String img, String txt) {
-    return Stack(
-      children: [
-        Container(
-          margin: EdgeInsets.all(10),
-          height: MediaQuery.of(context).size.height * 0.3,
-          // color: Colors.green,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            image: DecorationImage(
-              image: AssetImage(img),
-              fit: BoxFit.cover,
+Widget CardContants(BuildContext ctx, String img, String txt) {
+  final double screenHeight = MediaQuery.of(ctx).size.height;
+  return Stack(
+    children: [
+      Container(
+        margin: const EdgeInsets.all(10),
+        height: screenHeight * 0.3,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          image: DecorationImage(
+            image: AssetImage(img),
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(
+              txt,
+              style: const TextStyle(
+                  fontSize: 30,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold),
             ),
           ),
         ),
-        Positioned.fill(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Text(
-                txt,
-                style: TextStyle(
-                    fontSize: 30,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
