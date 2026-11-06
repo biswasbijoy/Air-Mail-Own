@@ -54,7 +54,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
 
   void _connectSocket() {
     socket = IO.io(
-      'http://192.168.0.120:5000',
+      'https://airmail-backend.onrender.com',
       <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
@@ -76,7 +76,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
     if (_token != null && _currentUserId != null) {
       try {
         final response = await http.post(
-          Uri.parse('http://10.0.2.2:5000/api/messages'),
+          Uri.parse('https://airmail-backend.onrender.com/api/messages'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $_token',

@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _fetchUsers() async {
     try {
       final response = await http
-          .get(Uri.parse('http://10.0.2.2:5000/api/users'),
+          .get(Uri.parse('https://airmail-backend.onrender.com/api/users'),
               headers: {'Authorization': 'Bearer $_token'});
       if (response.statusCode == 200) {
         final List<dynamic> users = json.decode(response.body);

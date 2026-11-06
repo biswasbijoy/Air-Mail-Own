@@ -206,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _authenticate() async {
-    final String url = 'http://10.0.2.2:5000/api/auth/${_isLogin ? 'login' : 'register'}';
+    final String url = 'https://airmail-backend.onrender.com/api/auth/${_isLogin ? 'login' : 'register'}';
 
     try {
       final Map<String, dynamic> requestBody;
