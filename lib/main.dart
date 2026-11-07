@@ -33,7 +33,44 @@ class MyApp extends StatelessWidget {
             borderSide: BorderSide(color: Color(0x00d4aa)),
           ),
         ),
+        colorScheme: ColorScheme.dark(
+          primary: Color(0x00d4aa),
+          surface: Color(0x08080c),
+          background: Color(0x08080c),
+          onPrimary: Color(0x000000),
+          onSurface: Color(0xfafafa),
+          onBackground: Color(0xfafafa),
+        ),
       ),
+      darkTheme: ThemeData(
+        fontFamily: "Lato",
+        scaffoldBackgroundColor: const Color(0x08080c),
+        primaryColor: const Color(0x00d4aa),
+        cardColor: const Color(0x1a1a25),
+        dividerColor: const Color(0x33ffffff),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xfafafa)),
+          bodyMedium: TextStyle(color: Color(0xa0a0a0)),
+          titleLarge: TextStyle(color: Colors.white, fontSize: 20),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0x55ffffff)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0x00d4aa)),
+          ),
+        ),
+        colorScheme: ColorScheme.dark(
+          primary: Color(0x00d4aa),
+          surface: Color(0x08080c),
+          background: Color(0x08080c),
+          onPrimary: Color(0x000000),
+          onSurface: Color(0xfafafa),
+          onBackground: Color(0xfafafa),
+        ),
+      ),
+      themeMode: ThemeMode.system,
       home: const LoginPage(),
     );
   }
