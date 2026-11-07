@@ -1,13 +1,13 @@
 class ChatModel {
-  var name;
-  var icon;
-  var time;
-  var status;
-  var currentMessage;
-  var id;
+  String? name;
+  String? icon;
+  String? time;
+  String? status;
+  String? currentMessage;
+  String? id;
   String? email;
   ChatModel({
-    required this.name,
+    this.name,
     this.icon,
     this.time,
     this.status,

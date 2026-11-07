@@ -12,15 +12,15 @@ class ContactCard extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           radius: 25,
-          backgroundImage: AssetImage(contact.icon),
+          backgroundImage: AssetImage(contact.icon ?? 'assets/images/default_avatar.png'),
         ),
         title: Text(
-          contact.name,
+          contact.name ?? 'Unknown',
           style: TextStyle(
               fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xfafafa)),
         ),
         subtitle: Text(
-          contact.status,
+          contact.status ?? 'offline',
           style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
         ),
       ),

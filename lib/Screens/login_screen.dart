@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
               chatmodels: [],
               sourceChat: ChatModel(
                 name: _isLogin ? responseData['user']['email'] : _nameController.text,
-                id: DateTime.now().millisecondsSinceEpoch,
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
                 email: _emailController.text,
               ),
             ),

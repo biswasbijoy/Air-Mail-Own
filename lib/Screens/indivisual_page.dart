@@ -103,7 +103,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
               ),
               CircleAvatar(
                 radius: 20,
-                backgroundImage: AssetImage(widget.chatModel.icon),
+                backgroundImage: AssetImage(widget.chatModel.icon ?? 'assets/images/default_avatar.png'),
               )
             ],
           ),
@@ -116,12 +116,12 @@ class _IndivisualPageState extends State<IndivisualPage> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.chatModel.name,
+                Text(widget.chatModel.name ?? 'Unknown',
                     style: TextStyle(
                         fontSize: 18.5, fontWeight: FontWeight.bold,
                         color: Colors.white)),
                 Text(
-                  "Last seen today at ${widget.chatModel.time}",
+                  "Last seen today at ${widget.chatModel.time ?? ''}",
                   style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
                 ),
               ],

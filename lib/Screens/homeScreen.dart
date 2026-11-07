@@ -38,10 +38,15 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _token = ModalRoute.of(context)!.settings.arguments as String?;
-    _userId = _token != null ? 'temp_user' : null; // In real app, decode token
-    _fetchUsers();
     _tabController = TabController(length: 4, vsync: this, initialIndex: 0);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _token = ModalRoute.of(context)!.settings.arguments as String?;
+    _userId = _token != null ? 'temp_user' : null;
+    _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
@@ -58,6 +63,8 @@ class _HomeScreenState extends State<HomeScreen>
               icon: 'assets/images/default_avatar.png',
               id: user['_id'].toString().substring(0, 8),
               email: user['email'],
+              time: 'Just now',
+              status: 'online',
             );
           }).toList();
         });
@@ -181,6 +188,8 @@ class _HomeScreenState extends State<HomeScreen>
               name: _userId != null ? 'User' : 'Unknown',
               id: _userId ?? '0',
               email: _token ?? '',
+              time: 'Just now',
+              status: 'online',
             ),
           ),
           SelectContact(),

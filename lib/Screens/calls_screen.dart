@@ -15,42 +15,62 @@ class _CallScreenState extends State<CallScreen> {
       ChatModel(
         name: 'Bill Gates',
         icon: "assets/images/BillGates.jpeg",
+        time: "10:00 AM",
+        status: "online",
       ),
       ChatModel(
         name: 'Boris Johnson',
         icon: "assets/images/BorisJohnson.jpg",
+        time: "Yesterday",
+        status: "online",
       ),
       ChatModel(
         name: 'Donald Trump',
         icon: "assets/images/DonaldTrump.jpg",
+        time: "2d ago",
+        status: "offline",
       ),
       ChatModel(
         name: 'Recep Tayyip Erdogan',
         icon: "assets/images/Erdogan.jpg",
+        time: "3d ago",
+        status: "online",
       ),
       ChatModel(
         name: 'Jack Ma',
         icon: "assets/images/JackMa.jpg",
+        time: "4d ago",
+        status: "online",
       ),
       ChatModel(
         name: 'Joe Biden',
         icon: "assets/images/JoeBiden.jpg",
+        time: "5d ago",
+        status: "online",
       ),
       ChatModel(
         name: 'John Abrahm',
         icon: "assets/images/JohnAbraham.jpg",
+        time: "6d ago",
+        status: "offline",
       ),
       ChatModel(
         name: 'Steve Jobs',
         icon: "assets/images/SteveJobs.jpg",
+        time: "1w ago",
+        status: "offline",
       ),
       ChatModel(
         name: 'Sundor Pichai',
         icon: "assets/images/SundorPichai.jpg",
+        time: "2w ago",
+        status: "online",
       ),
       ChatModel(
         name: 'Vladimir Putin',
         icon: "assets/images/VladimirPutin.jpg",
+        time: "3w ago",
+        status: "offline",
       )
     ];
     return Scaffold(
@@ -64,9 +84,9 @@ class _CallScreenState extends State<CallScreen> {
             child: ListTile(
               leading: CircleAvatar(
                 radius: 25,
-                backgroundImage: AssetImage(calls[index].icon),
+                backgroundImage: AssetImage(calls[index].icon ?? 'assets/images/default_avatar.png'),
               ),
-              title: Text(calls[index].name,
+              title: Text(calls[index].name ?? 'Unknown',
                   style: const TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w500,

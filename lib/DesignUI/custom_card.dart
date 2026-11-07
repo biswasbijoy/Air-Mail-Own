@@ -28,10 +28,10 @@ class CustomCard extends StatelessWidget {
           ListTile(
             leading: CircleAvatar(
               radius: 30,
-              backgroundImage: AssetImage(chatModel.icon),
+              backgroundImage: AssetImage(chatModel.icon ?? 'assets/images/default_avatar.png'),
             ),
             title: Text(
-              chatModel.name,
+              chatModel.name ?? 'Unknown',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -41,13 +41,13 @@ class CustomCard extends StatelessWidget {
               children: [
                 Icon(Icons.done_all, color: Color(0x00d4aa), size: 16),
                 Text(
-                  chatModel.currentMessage,
+                  chatModel.currentMessage ?? '',
                   style: TextStyle(fontSize: 16, color: Color(0xa0a0a0)),
                 ),
               ],
             ),
             trailing: Text(
-              chatModel.time,
+              chatModel.time ?? '',
               style: TextStyle(color: Color(0xa0a0a0)),
             ),
           ),
