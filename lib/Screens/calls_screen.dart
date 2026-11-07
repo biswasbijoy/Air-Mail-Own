@@ -1,4 +1,6 @@
 import 'package:airmail/Model/chat_model.dart';
+import 'package:airmail/theme/app_colors.dart';
+import 'package:airmail/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class CallScreen extends StatefulWidget {
@@ -28,7 +30,7 @@ class _CallScreenState extends State<CallScreen> {
         name: 'Donald Trump',
         icon: "assets/images/DonaldTrump.jpg",
         time: "2d ago",
-        status: "offline",
+        status: "online",
       ),
       ChatModel(
         name: 'Recep Tayyip Erdogan',
@@ -70,16 +72,16 @@ class _CallScreenState extends State<CallScreen> {
         name: 'Vladimir Putin',
         icon: "assets/images/VladimirPutin.jpg",
         time: "3w ago",
-        status: "offline",
+        status: "offline"
       )
     ];
     return Scaffold(
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: AppColors.darkBg,
       body: ListView.builder(
         itemCount: calls.length,
         itemBuilder: (context, index) {
           return Card(
-            color: const Color(0x1a1a25),
+            color: AppColors.darkRaised,
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: CircleAvatar(
@@ -94,19 +96,19 @@ class _CallScreenState extends State<CallScreen> {
               subtitle: Row(
                 children: [
                   Icon(Icons.call_missed_outgoing,
-                      color: Color(0x00d4aa),
+                      color: AppColors.primary,
                       size: 20),
                   const SizedBox(width: 6),
                   Text(
                     "10:00 AM",
-                    style: const TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
+                    style: TextStyle(fontSize: 13, color: AppColors.darkMuted),
                   ),
                 ],
               ),
               trailing: Icon(
                 Icons.call,
                 size: 25,
-                color: Color(0xfafafa),
+                color: AppColors.darkBg,
               ),
             ),
           );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:airmail/theme/app_colors.dart';
 
 class DeveloperScreenUI extends StatefulWidget {
   const DeveloperScreenUI({Key? key}) : super(key: key);
@@ -13,7 +14,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
         title: const Text(
           "Developer Information",
@@ -23,9 +24,9 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0x0f0f1a),
-                Color(0x1a1a2e),
-                Color(0x25253b),
+                AppColors.darkBg,
+                AppColors.darkSurface,
+                AppColors.darkRaised,
               ],
               begin: Alignment.bottomRight,
               end: Alignment.topLeft,
@@ -64,7 +65,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                 Text(
                   "Flutter Developer || Data Science Intern\nGoogle Certified Data Analyst\nMachine Learning Enthusiast\nCompetitive Programmer",
                   style: TextStyle(
-                      color: Color(0xa0a0a0),
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w100),
                   textAlign: TextAlign.center,
@@ -127,7 +128,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     "@biswasbijoy414",
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(
@@ -142,7 +143,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     "@biswasbijoy",
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(
@@ -157,7 +158,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     'biswasbijoy414@gmail.com',
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(
@@ -172,7 +173,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     '@bijoy414',
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(
@@ -187,7 +188,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     '@biswasbijoy_414',
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(
@@ -202,7 +203,7 @@ class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
                   title: Text(
                     'biswasbijoy',
                     style: TextStyle(
-                        color: Color(0x00d4aa), fontSize: 20, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(

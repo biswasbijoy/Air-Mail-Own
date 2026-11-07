@@ -8,7 +8,7 @@ Widget gameHeader(String title) {
       style: const TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: Color(0xfafafa),
+        color: Theme.of(context).colorScheme.surface,
       ),
       textAlign: TextAlign.center,
     ),
@@ -20,7 +20,7 @@ Widget cellBuilder(BuildContext context, int index, VoidCallback onTap) {
     child: Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Color(0x2a2a3a),
+        color: Theme.of(context).colorScheme.darkBorder,
         border: Border.all(color: Color(0x55ffffff)),
         borderRadius: BorderRadius.circular(15),
       ),
@@ -34,7 +34,7 @@ Widget cellBuilder(BuildContext context, int index, VoidCallback onTap) {
               '',
               style: TextStyle(
                 fontSize: 40,
-                color: Color(0x00d4aa),
+                color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),

@@ -35,20 +35,20 @@ class CustomCard extends StatelessWidget {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xfafafa)),
+                  color: Theme.of(context).colorScheme.primary),
             ),
             subtitle: Row(
               children: [
-                Icon(Icons.done_all, color: Color(0x00d4aa), size: 16),
+                Icon(Icons.done_all, color: Theme.of(context).colorScheme.primary, size: 16),
                 Text(
                   chatModel.currentMessage ?? '',
-                  style: TextStyle(fontSize: 16, color: Color(0xa0a0a0)),
+                  style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
             trailing: Text(
               chatModel.time ?? '',
-              style: TextStyle(color: Color(0xa0a0a0)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ],

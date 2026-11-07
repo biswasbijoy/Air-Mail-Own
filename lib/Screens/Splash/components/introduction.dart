@@ -17,7 +17,7 @@ class Introduction extends StatelessWidget {
               const Icon(
                 Icons.message,
                 size: 100,
-                color: Color(0x00d4aa),
+                color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 30),
               const Text(
@@ -25,7 +25,7 @@ class Introduction extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xfafafa),
+                  color: Theme.of(context).colorScheme.surface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -49,7 +49,7 @@ class Introduction extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0x00d4aa),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.black,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

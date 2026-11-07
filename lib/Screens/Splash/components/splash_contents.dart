@@ -22,7 +22,7 @@ class SplashContents extends StatelessWidget {
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,
-            color: Color(0xfafafa),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

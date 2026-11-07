@@ -10,7 +10,7 @@ Widget gameHeader(String title) {
       style: const TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: Color(0xfafafa),
+        color: Theme.of(context).colorScheme.primary,
       ),
       textAlign: TextAlign.center,
     ),
@@ -45,14 +45,14 @@ Widget scoreDisplay(String label, int score) {
     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
     padding: const EdgeInsets.all(15),
     decoration: BoxDecoration(
-      color: Color(0x1a1a25),
+      color: Theme.of(context).colorScheme.darkRaised,
       borderRadius: BorderRadius.circular(15),
     ),
     child: Text(
       '$label: $score',
       style: const TextStyle(
         fontSize: 18,
-        color: Color(0x00d4aa),
+        color: Theme.of(context).colorScheme.primary,
       ),
     ),
   );

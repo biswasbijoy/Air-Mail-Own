@@ -26,7 +26,7 @@ class _BodyState extends State<Body> {
       height: 6,
       width: currentPage == index ? 20 : 6,
       decoration: BoxDecoration(
-        color: Color(0x00d4aa),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(3),
       ),
     );

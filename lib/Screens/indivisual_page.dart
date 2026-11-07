@@ -122,7 +122,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                         color: Colors.white)),
                 Text(
                   "Last seen today at ${widget.chatModel.time ?? ''}",
-                  style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary),
                 ),
               ],
             ),
@@ -130,11 +130,11 @@ class _IndivisualPageState extends State<IndivisualPage> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.call, color: Color(0x00d4aa)),
+            icon: Icon(Icons.call, color: Theme.of(context).colorScheme.primary),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.videocam, color: Color(0x00d4aa)),
+            icon: Icon(Icons.videocam, color: Theme.of(context).colorScheme.primary),
             onPressed: () {},
           ),
           PopupMenuButton<String>(
@@ -231,12 +231,12 @@ class _IndivisualPageState extends State<IndivisualPage> {
                               });
                             },
                             icon: Icon(Icons.emoji_emotions),
-                            color: Color(0x00d4aa),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           suffixIcon: IconButton(
                             onPressed: () {},
                             icon: Icon(Icons.camera_alt),
-                            color: Color(0x00d4aa),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -245,7 +245,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                       padding: EdgeInsets.only(bottom: 8, right: 2),
                       child: CircleAvatar(
                         radius: 25,
-                        backgroundColor: Color(0x00d4aa),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         child: IconButton(
                           icon: Icon(
                             sendButton ? Icons.send : Icons.mic,

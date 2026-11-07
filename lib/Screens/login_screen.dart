@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:airmail/DesignUI/button_card.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Screens/homeScreen.dart';
+import 'package:airmail/theme/app_colors.dart';
+import 'package:airmail/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,9 +36,9 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0x0f0f1a),
-                Color(0x1a1a2e),
-                Color(0x25253b),
+                AppColors.darkBg,
+                AppColors.darkSurface,
+                AppColors.darkRaised,
               ],
               begin: Alignment.bottomRight,
               end: Alignment.topLeft,
@@ -45,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         elevation: 4,
       ),
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: AppColors.darkBg,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -59,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Icon(
                       Icons.message,
                       size: 80,
-                      color: Color(0x00d4aa),
+                      color: AppColors.primary,
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -80,10 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Full Name',
                           hintText: 'Enter your name',
                           border: OutlineInputBorder(
-                            borderSide: BorderSide(color: Color(0x55ffffff)),
+                            borderSide: BorderSide(color: AppColors.onPrimary),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Color(0x00d4aa)),
+                            borderSide: BorderSide(color: AppColors.primary),
                           ),
                         ),
                         validator: (value) {
@@ -102,10 +104,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Email',
                         hintText: 'Enter your email',
                         border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x55ffffff)),
+                          borderSide: BorderSide(color: AppColors.onPrimary),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x00d4aa)),
+                          borderSide: BorderSide(color: AppColors.primary),
                         ),
                       ),
                       keyboardType: TextInputType.emailAddress,
@@ -128,10 +130,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Password',
                         hintText: 'Enter your password',
                         border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x55ffffff)),
+                          borderSide: BorderSide(color: AppColors.onPrimary),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0x00d4aa)),
+                          borderSide: BorderSide(color: AppColors.primary),
                         ),
                       ),
                       obscureText: true,
@@ -159,20 +161,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0x00d4aa),
+                          backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(
-                                color: Colors.black,
+                                color: AppColors.onPrimary,
                               )
                             : Text(
                                 _isLogin ? 'Sign In' : 'Register',
                                 style: const TextStyle(
                                   fontSize: 18,
-                                  color: Colors.black,
+                                  color: AppColors.onPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -192,9 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         _isLogin
                             ? 'Create a new account'
                             : 'Have an account? Sign in',
-                        style: const TextStyle(
-                          color: Color(0x88ffffff),
+                        style: TextStyle(
                           fontSize: 15,
+                          color: AppColors.darkMuted,
                         ),
                       ),
                     ),

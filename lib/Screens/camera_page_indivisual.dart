@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:airmail/theme/app_colors.dart';
 
 class CameraIndivisual extends StatelessWidget {
   const CameraIndivisual({Key? key}) : super(key: key);
@@ -15,9 +16,9 @@ class CameraIndivisual extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0x0f0f1a),
-                Color(0x1a1a2e),
-                Color(0x25253b),
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface,
               ],
               begin: Alignment.bottomRight,
               end: Alignment.topLeft,
@@ -26,7 +27,7 @@ class CameraIndivisual extends StatelessWidget {
         ),
       ),
       body: Container(
-        color: const Color(0x08080c),
+        color: AppColors.darkBg,
       ),
     );
   }

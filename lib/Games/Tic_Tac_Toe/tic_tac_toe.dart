@@ -8,7 +8,7 @@ class TicTacToe extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tic Tac Toe'),
-        backgroundColor: Color(0x00d4aa),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.black,
       ),
       body: const Center(

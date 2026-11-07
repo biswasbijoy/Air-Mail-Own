@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:airmail/theme/app_colors.dart';
+import 'package:airmail/theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -81,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen>
         title: const Text(
           "AirMail",
           style: TextStyle(
-              color: Color(0xfffff8f0),
+              color: Colors.white,
               fontSize: 25,
               fontWeight: FontWeight.bold),
         ),
@@ -89,9 +91,9 @@ class _HomeScreenState extends State<HomeScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0x0f0f1a),
-                Color(0x1a1a2e),
-                Color(0x25253b),
+                AppColors.darkBg,
+                AppColors.darkSurface,
+                AppColors.darkRaised,
               ],
               begin: Alignment.bottomRight,
               end: Alignment.topLeft,
@@ -154,24 +156,24 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
         bottom: TabBar(
-          indicatorColor: Color(0x00d4aa),
+          indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 4,
           controller: _tabController,
           tabs: [
             Tab(
-              icon: Icon(Icons.inbox, color: Colors.white),
+              icon: Icon(Icons.inbox, color: Theme.of(context).colorScheme.onSurface),
               text: 'Inbox',
             ),
             Tab(
-              icon: Icon(Icons.contacts, color: Colors.white),
+              icon: Icon(Icons.contacts, color: Theme.of(context).colorScheme.onSurface),
               text: 'Contacts',
             ),
             Tab(
-              icon: Icon(Icons.call, color: Colors.white),
+              icon: Icon(Icons.call, color: Theme.of(context).colorScheme.onSurface),
               text: 'Calls',
             ),
             Tab(
-              icon: Icon(Icons.sports_esports_outlined, color: Colors.white),
+              icon: Icon(Icons.sports_esports_outlined, color: Theme.of(context).colorScheme.onSurface),
               text: 'Games',
             ),
           ],

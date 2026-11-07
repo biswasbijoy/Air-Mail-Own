@@ -6,10 +6,10 @@ class HowToPlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: const Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('How to Play'),
-        backgroundColor: Color(0x00d4aa),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
@@ -22,7 +22,7 @@ class HowToPlay extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xfafafa),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 20),
@@ -35,7 +35,7 @@ class HowToPlay extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xfafafa),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 10),
@@ -47,7 +47,7 @@ class HowToPlay extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0x00d4aa),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.black,
                 ),
                 child: const Text('Back to Game'),
@@ -66,7 +66,7 @@ class HowToPlay extends StatelessWidget {
         children: [
           Icon(
             Icons.check_circle,
-            color: Color(0x00d4aa),
+            color: Theme.of(context).colorScheme.primary,
             size: 24,
           ),
           const SizedBox(width: 10),
@@ -92,7 +92,7 @@ class HowToPlay extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Color(0x00d4aa),
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(

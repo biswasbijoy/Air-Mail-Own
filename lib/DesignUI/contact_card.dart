@@ -17,11 +17,11 @@ class ContactCard extends StatelessWidget {
         title: Text(
           contact.name ?? 'Unknown',
           style: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xfafafa)),
+              fontSize: 15, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
         ),
         subtitle: Text(
           contact.status ?? 'offline',
-          style: TextStyle(fontSize: 13, color: Color(0xa0a0a0)),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ),
     );

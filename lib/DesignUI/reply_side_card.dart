@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:airmail/theme/app_colors.dart';
 
 class ReplyCard extends StatelessWidget {
   const ReplyCard({Key? key, required this.message}) : super(key: key);
@@ -12,10 +13,10 @@ class ReplyCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 15,
-            backgroundColor: Color(0x1a1a25),
+            backgroundColor: AppColors.darkRaised,
             child: Icon(
               Icons.person,
-              color: Color(0x00d4aa),
+              color: AppColors.primary,
               size: 16,
             ),
           ),
@@ -24,7 +25,7 @@ class ReplyCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Color(0x2a2a3a),
+                color: AppColors.darkBorder,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -55,7 +56,7 @@ class OwnMessageCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Color(0x00d4aa),
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Text(

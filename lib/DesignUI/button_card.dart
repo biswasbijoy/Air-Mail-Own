@@ -16,7 +16,7 @@ class ButtonCard extends StatelessWidget {
           size: 35,
           color: Colors.black,
         ),
-        backgroundColor: Color(0x00d4aa),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       title: Text(
         name,

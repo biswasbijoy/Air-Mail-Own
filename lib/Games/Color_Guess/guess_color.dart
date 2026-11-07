@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:airmail/theme/app_colors.dart';
 
 class ColorGuess extends StatelessWidget {
   const ColorGuess({Key? key}) : super(key: key);
@@ -6,22 +7,22 @@ class ColorGuess extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
         title: const Text('Guess the Color'),
-        backgroundColor: Color(0x00d4aa),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.black,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Color Guessing Game',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xfafafa),
+                color: AppColors.darkText,
               ),
             ),
             const SizedBox(height: 20),
@@ -37,7 +38,7 @@ class ColorGuess extends StatelessWidget {
             ElevatedButton(
               onPressed: () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0x00d4aa),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.black,
               ),
               child: const Text('Play'),

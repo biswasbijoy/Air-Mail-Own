@@ -1,5 +1,6 @@
 import 'package:airmail/Screens/developer_profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:airmail/theme/app_colors.dart';
 
 class DrawerComponent extends StatelessWidget {
   const DrawerComponent({
@@ -9,7 +10,7 @@ class DrawerComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color(0x08080c),
+      backgroundColor: AppColors.darkBg,
       child: ListView(
         children: [
           DrawerHeader(
@@ -36,12 +37,12 @@ class DrawerComponent extends StatelessWidget {
                   children: [
                     Text(
                       '+8801751990907',
-                      style: TextStyle(fontSize: 16, color: Color(0xa0a0a0)),
+                      style: TextStyle(fontSize: 16, color: AppColors.darkMuted),
                     ),
                     IconButton(
                         onPressed: () {},
                         icon: Icon(Icons.arrow_drop_down_circle_sharp,
-                            color: Color(0xa0a0a0)))
+                            color: AppColors.darkMuted))
                   ],
                 ),
               ],
@@ -49,37 +50,37 @@ class DrawerComponent extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0x0f0f1a),
-                  Color(0x1a1a2e),
-                ],
+                AppColors.darkBg,
+                AppColors.darkSurface,
+              ],
                 begin: Alignment.bottomRight,
                 end: Alignment.topLeft,
               ),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.bookmark_border_outlined, color: Color(0xa0a0a0)),
+            leading: Icon(Icons.bookmark_border_outlined, color: AppColors.darkMuted),
             title: Text(
               'Saved Message',
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.settings_outlined, color: Color(0xa0a0a0)),
+            leading: Icon(Icons.settings_outlined, color: AppColors.darkMuted),
             title: Text(
               'Settings',
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.person_add_alt_outlined, color: Color(0xa0a0a0)),
+            leading: Icon(Icons.person_add_alt_outlined, color: AppColors.darkMuted),
             title: Text(
               'Invite Friends',
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.help_outline_outlined, color: Color(0xa0a0a0)),
+            leading: Icon(Icons.help_outline_outlined, color: AppColors.darkMuted),
             title: Text(
               'AirMails Features',
               style: TextStyle(fontSize: 18, color: Colors.white),
@@ -88,10 +89,10 @@ class DrawerComponent extends StatelessWidget {
           ListTile(
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (context) => DeveloperScreen())),
-            leading: Icon(Icons.person, color: Color(0x00d4aa)),
+            leading: Icon(Icons.person, color: AppColors.primary),
             title: Text(
               'Developer Contact',
-              style: TextStyle(color: Color(0x00d4aa), fontSize: 18),
+              style: TextStyle(color: AppColors.primary, fontSize: 18),
             ),
           ),
         ],
