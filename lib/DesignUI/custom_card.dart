@@ -1,57 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:airmail/Model/chat_model.dart';
-import 'package:airmail/Screens/indivisual_page.dart';
+import '../theme/app_colors.dart';
+import 'app_avatar.dart';
 
 class CustomCard extends StatelessWidget {
-  const CustomCard(
-      {Key? key, required this.chatModel, required this.sourceChat})
-      : super(key: key);
-  final ChatModel chatModel;
-  final ChatModel sourceChat;
+  final dynamic chatModel;
+  final VoidCallback? onTap;
+
+  const CustomCard({super.key, required this.chatModel, this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = chatModel.status == 'online';
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => IndivisualPage(
-              chatModel: chatModel,
-              sourceChat: sourceChat,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            AppAvatar(
+              name: chatModel.name,
+              size: 52,
+              online: isOnline,
             ),
-          ),
-        );
-      },
-      child: Column(
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              radius: 30,
-              backgroundImage: AssetImage(chatModel.icon ?? 'assets/images/default_avatar.png'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    chatModel.name ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    chatModel.currentMessage ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
-            title: Text(
-              chatModel.name ?? 'Unknown',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary),
-            ),
-            subtitle: Row(
-              children: [
-                Icon(Icons.done_all, color: Theme.of(context).colorScheme.primary, size: 16),
-                Text(
-                  chatModel.currentMessage ?? '',
-                  style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-            trailing: Text(
+            const SizedBox(width: 8),
+            Text(
               chatModel.time ?? '',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

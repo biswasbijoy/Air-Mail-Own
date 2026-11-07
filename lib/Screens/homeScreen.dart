@@ -30,8 +30,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  _HomeScreenState();
-
   late TabController _tabController;
   List<ChatModel> _contacts = [];
   String? _token;
@@ -40,7 +38,11 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: 0);
+    _tabController = TabController(
+      length: 4,
+      initialIndex: 0,
+      vsync: this,
+    );
   }
 
   @override
@@ -80,13 +82,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "AirMail",
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.bold),
-        ),
+        title: _buildAppBarTitle(),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -103,8 +99,7 @@ class _HomeScreenState extends State<HomeScreen>
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.search,
-                color: Colors.white),
+            icon: const Icon(Icons.search, color: Colors.white),
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -155,51 +150,77 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
         ],
-        bottom: TabBar(
-          indicatorColor: Theme.of(context).colorScheme.primary,
-          indicatorWeight: 4,
-          controller: _tabController,
-          tabs: [
-            Tab(
-              icon: Icon(Icons.inbox, color: Theme.of(context).colorScheme.onSurface),
-              text: 'Inbox',
-            ),
-            Tab(
-              icon: Icon(Icons.contacts, color: Theme.of(context).colorScheme.onSurface),
-              text: 'Contacts',
-            ),
-            Tab(
-              icon: Icon(Icons.call, color: Theme.of(context).colorScheme.onSurface),
-              text: 'Calls',
-            ),
-            Tab(
-              icon: Icon(Icons.sports_esports_outlined, color: Theme.of(context).colorScheme.onSurface),
-              text: 'Games',
-            ),
-          ],
-        ),
-        elevation: 20,
+        elevation: 0,
         titleSpacing: 20,
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: IndexedStack(
+        index: _tabController.index,
         children: [
           ChatPage(
-            chatmodels: _contacts,
-            sourceChat: ChatModel(
-              name: _userId != null ? 'User' : 'Unknown',
-              id: _userId ?? '0',
-              email: _token ?? '',
-              time: 'Just now',
-              status: 'online',
-            ),
+            chatmodels: widget.chatmodels,
+            sourceChat: widget.sourceChat,
           ),
           SelectContact(),
           CallScreen(),
           GameScreen(),
         ],
       ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: AppColors.darkSurface,
+        indicatorColor: AppColors.primary.withOpacity(0.2),
+        height: 68,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Inbox',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Contacts',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.call_outlined),
+            selectedIcon: Icon(Icons.call),
+            label: 'Calls',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.sports_esports_outlined),
+            selectedIcon: Icon(Icons.sports_esports),
+            label: 'Games',
+          ),
+        ],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SelectContact(),
+                  ),
+                );
+              },
+              child: const Icon(Icons.edit_outlined),
+            )
+          : null,
       drawer: DrawerComponent(),
     );
+  }
+
+  Widget _buildAppBarTitle() {
+    switch (_tabController.index) {
+      case 0:
+        return const Text('Inbox');
+      case 1:
+        return const Text('Contacts');
+      case 2:
+        return const Text('Calls');
+      case 3:
+        return const Text('Games');
+      default:
+        return const Text('AirMail');
+    }
   }
 }

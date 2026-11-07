@@ -1,269 +1,197 @@
-import 'dart:convert';
-import 'package:airmail/Model/message_model.dart';
-import 'package:airmail/DesignUI/reply_side_card.dart';
-import 'package:airmail/DesignUI/user_side_card.dart';
+import 'package:airmail/DesignUI/message_bubble.dart';
+import 'package:airmail/DesignUI/empty_state.dart';
 import 'package:airmail/Model/chat_model.dart';
-import 'package:airmail/Screens/camera_page_indivisual.dart';
-// import 'package:airmail/Screens/camera_screen.dart';
+import 'package:airmail/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'dart:io';
 
 class IndivisualPage extends StatefulWidget {
-  const IndivisualPage(
-      {Key? key, required this.chatModel, required this.sourceChat})
-      : super(key: key);
   final ChatModel chatModel;
-  final ChatModel sourceChat;
+  final String userId;
+
+  const IndivisualPage({
+    Key? key,
+    required this.chatModel,
+    required this.userId,
+  }) : super(key: key);
 
   @override
   State<IndivisualPage> createState() => _IndivisualPageState();
 }
 
 class _IndivisualPageState extends State<IndivisualPage> {
-  bool showEmoji = false;
-  FocusNode focusNode = FocusNode();
-  bool sendButton = false;
-  List<MessageModel> messages = [];
-
-  TextEditingController _controller = TextEditingController();
-  String? _token;
-  String? _currentUserId;
+  final _controller = TextEditingController();
+  final List<Map<String, dynamic>> _messages = [];
+  String? _lastDate;
 
   @override
   void initState() {
     super.initState();
-    _token = '';
-    _currentUserId = 'current_user';
-    focusNode.addListener(
-      () {
-        if (focusNode.hasFocus) {
-          setState(
-            () {
-              showEmoji = false;
-            },
-          );
-        }
-      },
-    );
+    _messages.add({
+      'text': 'Hi! How are you?',
+      'isMine': true,
+      'time': '2:30 PM',
+    });
+    _messages.add({
+      'text': 'I\'m doing well, thanks!',
+      'isMine': false,
+      'time': '2:31 PM',
+    });
+    _lastDate = null;
   }
 
-  void _sendMessage() async {
-    if (_token != null && _currentUserId != null && _controller.text.isNotEmpty) {
-      try {
-        final response = await http.post(
-          Uri.parse('https://airmail-backend.onrender.com/api/messages'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_token',
-          },
-          body: json.encode({
-            'senderId': _currentUserId,
-            'receiverId': widget.chatModel.id,
-            'message': _controller.text,
-          }),
-        );
-        if (response.statusCode == 200) {
-          final decoded = json.decode(response.body);
-          setState(() {
-            messages.add(MessageModel(
-              type: "source",
-              message: _controller.text,
-              time: DateTime.now().toString(),
-            ));
-          });
-        } else {
-          print('Failed to send message: ${response.body}');
-        }
-      } catch (e) {
-        print('Error sending message: $e');
-      }
-      setState(() {
-        _controller.clear();
-        sendButton = false;
+  void _send() {
+    if (_controller.text.trim().isEmpty) return;
+    final text = _controller.text;
+    setState(() {
+      _messages.add({
+        'text': text,
+        'isMine': true,
+        'time': 'Today',
       });
-    }
+    });
+    _controller.clear();
+  }
+
+  String _getDateLabel(String time) {
+    final now = DateTime.now();
+    final messageDate = DateTime.parse('2024-01-01');
+    final today = now.difference(messageDate).inDays == 0 ? 'Today' : 'Yesterday';
+    return today;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        titleSpacing: 0,
-        leadingWidth: 70,
-        leading: InkWell(
-          onTap: () => Navigator.pop(context),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.arrow_back,
-                size: 24,
-                color: Colors.white,
-              ),
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: AssetImage(widget.chatModel.icon ?? 'assets/images/default_avatar.png'),
-              )
-            ],
-          ),
-        ),
-        title: InkWell(
-          onTap: () {},
-          child: Container(
-            margin: EdgeInsets.all(6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+        leadingWidth: 40,
+        title: Row(
+          children: [
+            AppAvatar(
+              size: 38,
+              online: widget.chatModel.status == 'online',
+            ),
+            const SizedBox(width: 10),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.chatModel.name ?? 'Unknown',
-                    style: TextStyle(
-                        fontSize: 18.5, fontWeight: FontWeight.bold,
-                        color: Colors.white)),
                 Text(
-                  "Last seen today at ${widget.chatModel.time ?? ''}",
-                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary),
+                  widget.chatModel.name ?? 'Chat',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  widget.chatModel.status == 'online'
+                      ? 'Online'
+                      : 'Offline',
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
-          ),
+          ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.call, color: Theme.of(context).colorScheme.primary),
+            icon: const Icon(Icons.call_outlined),
             onPressed: () {},
           ),
-          IconButton(
-            icon: Icon(Icons.videocam, color: Theme.of(context).colorScheme.primary),
-            onPressed: () {},
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {},
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: "View Profile",
-                child: Text("View Profile"),
+          PopupMenuButton(
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(
+                value: 'Settings',
+                child: Text('Settings'),
               ),
-              PopupMenuItem(
-                value: "Search",
-                child: Text("Search"),
-              ),
-              PopupMenuItem(
-                value: "Mute Notification",
-                child: Text("Mute Notification"),
-              ),
-              PopupMenuItem(
-                value: "Block",
-                child: Text("Block"),
+              const PopupMenuItem(
+                value: 'Log out',
+                child: Text('Log out'),
               ),
             ],
           ),
         ],
       ),
-      body: WillPopScope(
-        onWillPop: () {
-          if (showEmoji) {
-            setState(() {
-              showEmoji = false;
-            });
-          } else {
-            Navigator.pop(context);
-          }
-          return Future.value(false);
-        },
-        child: Stack(
-          children: [
-            Image.asset(
-              'assets/images/background.png',
-              fit: BoxFit.cover,
-            ),
-            ListView.builder(
-              padding: EdgeInsets.only(top: 10),
-              itemCount: messages.length,
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              reverse: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _messages.length,
               itemBuilder: (context, index) {
-                if (messages[index].type == "source") {
-                  return OwnMessageCard(
-                    message: messages[index].message,
-                  );
-                } else {
-                  return ReplyCard(
-                    message: messages[index].message,
-                  );
-                }
+                final message = _messages[index];
+                final isToday = _getDateLabel(message['time']!) == 'Today';
+                final dateWidget = today
+                    ? null
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        color: AppColors.darkRaised,
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Text(
+                          'Yesterday',
+                          style: TextStyle(fontSize: 12, color: AppColors.darkMuted),
+                        ),
+                      );
+
+                return MessageBubble(
+                  text: message['text']!,
+                  time: message['time']!,
+                  isMine: message['isMine'] as bool,
+                );
               },
             ),
-            Positioned(
-              bottom: 10,
-              left: 10,
-              right: 10,
-              child: Card(
-                margin: EdgeInsets.only(left: 2, right: 2, bottom: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _controller,
-                        focusNode: focusNode,
-                        keyboardType: TextInputType.multiline,
-                        maxLines: 5,
-                        minLines: 1,
-                        onChanged: (value) {
-                          if (value.length > 0) {
-                            setState(() {
-                              sendButton = true;
-                            });
-                          } else {
-                            sendButton = false;
-                          }
-                        },
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: "Type a message",
-                          contentPadding: EdgeInsets.all(5),
-                          prefixIcon: IconButton(
-                            onPressed: () {
-                              focusNode.unfocus();
-                              setState(() {
-                                showEmoji = !showEmoji;
-                              });
-                            },
-                            icon: Icon(Icons.emoji_emotions),
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          suffixIcon: IconButton(
-                            onPressed: () {},
-                            icon: Icon(Icons.camera_alt),
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
+          ),
+          if (_messages.isEmpty)
+            const EmptyState(
+              icon: Icons.waving_hand_outlined,
+              title: 'Say hi',
+              subtitle: 'Send the first message.',
+            ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  minLines: 1,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    hintText: 'Message',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 8, right: 2),
-                      child: CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: IconButton(
-                          icon: Icon(
-                            sendButton ? Icons.send : Icons.mic,
-                            color: Colors.black,
-                          ),
-                          onPressed: () {
-                            if (sendButton) {
-                              _sendMessage();
-                            }
-                          },
-                        ),
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
-                  ],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                  ),
+                  onPressed: _send,
+                  icon: const Icon(Icons.send_rounded),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
