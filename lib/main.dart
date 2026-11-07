@@ -28,18 +28,16 @@ class MyApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Color(0x55ffffff)),
+            borderRadius: BorderRadius.circular(25),
           ),
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Color(0x00d4aa)),
+            borderRadius: BorderRadius.circular(25),
           ),
-        ),
-        colorScheme: ColorScheme.dark(
-          primary: Color(0x00d4aa),
-          surface: Color(0x08080c),
-          background: Color(0x08080c),
-          onPrimary: Color(0x000000),
-          onSurface: Color(0xfafafa),
-          onBackground: Color(0xfafafa),
+          filled: true,
+          fillColor: Color(0x1a1a25),
+          hintStyle: TextStyle(color: Color(0x80a0a0a0)),
+          contentPadding: EdgeInsets.all(15),
         ),
       ),
       darkTheme: ThemeData(
@@ -56,18 +54,16 @@ class MyApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Color(0x55ffffff)),
+            borderRadius: BorderRadius.circular(25),
           ),
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Color(0x00d4aa)),
+            borderRadius: BorderRadius.circular(25),
           ),
-        ),
-        colorScheme: ColorScheme.dark(
-          primary: Color(0x00d4aa),
-          surface: Color(0x08080c),
-          background: Color(0x08080c),
-          onPrimary: Color(0x000000),
-          onSurface: Color(0xfafafa),
-          onBackground: Color(0xfafafa),
+          filled: true,
+          fillColor: Color(0x1a1a25),
+          hintStyle: TextStyle(color: Color(0x80a0a0a0)),
+          contentPadding: EdgeInsets.all(15),
         ),
       ),
       themeMode: ThemeMode.system,
