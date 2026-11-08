@@ -169,6 +169,11 @@ class _HomeScreenState extends State<HomeScreen>
         backgroundColor: AppColors.darkSurface,
         indicatorColor: AppColors.primary.withOpacity(0.2),
         height: 68,
+        onDestinationSelected: (int index) {
+          setState(() {
+            _tabController.animateTo(index);
+          });
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
