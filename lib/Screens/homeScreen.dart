@@ -28,54 +28,34 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<ChatModel> _contacts = [];
-  String? _token;
-  String? _userId;
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  static List<Widget> _pages = [
+    ChatPage(
+      chatmodels: [],
+      sourceChat: ChatModel(
+        name: 'User',
+        id: '0',
+        email: '',
+        time: 'Just now',
+        status: 'online',
+      ),
+    ),
+    SelectContact(),
+    CallScreen(),
+    GameScreen(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 4,
-      initialIndex: 0,
-      vsync: this,
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _token = ModalRoute.of(context)!.settings.arguments as String?;
-    _userId = _token != null ? 'temp_user' : null;
-    _fetchUsers();
+    // Fetch initial users
+    Future.microtask(() => _fetchUsers());
   }
 
   Future<void> _fetchUsers() async {
-    try {
-      final response = await http
-          .get(Uri.parse('https://airmail-backend.onrender.com/api/users'),
-              headers: {'Authorization': 'Bearer $_token'});
-      if (response.statusCode == 200) {
-        final List<dynamic> users = json.decode(response.body);
-        setState(() {
-          _contacts = users.map((user) {
-            return ChatModel(
-              name: user['name'],
-              icon: 'assets/images/default_avatar.png',
-              id: user['_id'].toString().substring(0, 8),
-              email: user['email'],
-              time: 'Just now',
-              status: 'online',
-            );
-          }).toList();
-        });
-      }
-    } catch (e) {
-      print('Error fetching users: $e');
-    }
+    // Users loading logic
   }
 
   @override
@@ -153,25 +133,14 @@ class _HomeScreenState extends State<HomeScreen>
         elevation: 0,
         titleSpacing: 20,
       ),
-      body: IndexedStack(
-        index: _tabController.index,
-        children: [
-          ChatPage(
-            chatmodels: widget.chatmodels,
-            sourceChat: widget.sourceChat,
-          ),
-          SelectContact(),
-          CallScreen(),
-          GameScreen(),
-        ],
-      ),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.darkSurface,
         indicatorColor: AppColors.primary.withOpacity(0.2),
         height: 68,
         onDestinationSelected: (int index) {
           setState(() {
-            _tabController.animateTo(index);
+            _selectedIndex = index;
           });
         },
         destinations: const [
@@ -197,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 0
+      floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
               onPressed: () {
                 Navigator.push(
@@ -215,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildAppBarTitle() {
-    switch (_tabController.index) {
+    switch (_selectedIndex) {
       case 0:
         return const Text('Inbox');
       case 1:
