@@ -138,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: AppColors.darkSurface,
         indicatorColor: AppColors.primary.withOpacity(0.2),
         height: 68,
+        selectedIndex: _selectedIndex,
         onDestinationSelected: (int index) {
           setState(() {
             _selectedIndex = index;
