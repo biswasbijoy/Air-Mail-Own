@@ -24,7 +24,7 @@ class ChatModel {
       id: (json['id'] ?? json['_id'])?.toString(),
       name: json['name']?.toString(),
       email: json['email']?.toString(),
-      status: 'offline',
+      status: json['online'] == true ? 'online' : 'offline',
     );
   }
 
@@ -32,7 +32,8 @@ class ChatModel {
     final user = json['user'] is Map
         ? Map<String, dynamic>.from(json['user'] as Map)
         : const <String, dynamic>{};
-    final lastMessageAt = DateTime.tryParse(json['lastMessageAt']?.toString() ?? '');
+    final lastMessageAt =
+        DateTime.tryParse(json['lastMessageAt']?.toString() ?? '');
 
     return ChatModel(
       id: (user['id'] ?? user['_id'])?.toString(),
@@ -40,7 +41,7 @@ class ChatModel {
       email: user['email']?.toString(),
       currentMessage: json['lastMessage']?.toString(),
       lastMessageAt: lastMessageAt,
-      status: 'offline',
+      status: user['online'] == true ? 'online' : 'offline',
     );
   }
 }

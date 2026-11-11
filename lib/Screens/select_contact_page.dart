@@ -1,8 +1,10 @@
 import 'package:airmail/DesignUI/contact_card.dart';
 import 'package:airmail/DesignUI/empty_state.dart';
 import 'package:airmail/Model/chat_model.dart';
+import 'package:airmail/Screens/add_contact_page.dart';
 import 'package:airmail/Screens/indivisual_page.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -36,8 +38,9 @@ class _SelectContactState extends State<SelectContact> {
   Future<void> _loadContacts() async {
     try {
       final contacts =
-          await ApiService(token: widget.session.token).fetchUsers();
+          await ApiService(token: widget.session.token).fetchContacts();
       if (!mounted) return;
+      RealtimeService.instance.updateOnlineStatuses(contacts);
       setState(() {
         _contacts
           ..clear()
@@ -83,6 +86,19 @@ class _SelectContactState extends State<SelectContact> {
     );
   }
 
+  Future<void> _openAddContact() async {
+    final added = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AddContactPage(session: widget.session),
+      ),
+    );
+
+    if (added == true && mounted) {
+      setState(() => _loading = true);
+      await _loadContacts();
+    }
+  }
+
   Widget _buildBody() {
     final filtered = _filteredContacts;
 
@@ -95,6 +111,17 @@ class _SelectContactState extends State<SelectContact> {
             decoration: const InputDecoration(
               hintText: 'Search name or email',
               prefixIcon: Icon(Icons.search),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: _openAddContact,
+              icon: const Icon(Icons.person_add_alt_1),
+              label: const Text('Add contact'),
             ),
           ),
         ),
@@ -114,9 +141,10 @@ class _SelectContactState extends State<SelectContact> {
                   : filtered.isEmpty
                       ? EmptyState(
                           icon: Icons.person_outline,
-                          title: _contacts.isEmpty ? 'No contacts' : 'No matches',
+                          title:
+                              _contacts.isEmpty ? 'No contacts' : 'No matches',
                           subtitle: _contacts.isEmpty
-                              ? 'Invite friends to start chatting.'
+                              ? 'Add a contact by email to start chatting.'
                               : 'No contacts match your search.',
                         )
                       : RefreshIndicator(

@@ -76,8 +76,23 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
 
+const contactSchema = new mongoose.Schema(
+  {
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    contact: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false }
+);
+
+contactSchema.index({ owner: 1, contact: 1 }, { unique: true });
+contactSchema.index({ owner: 1, createdAt: -1 });
+
 const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
+const Contact = mongoose.model('Contact', contactSchema);
+
+const onlineSockets = new Map();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PUBLIC_USER_FIELDS = 'name email createdAt';
@@ -87,7 +102,48 @@ function publicUser(user) {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
+    online: onlineSockets.has(user._id.toString()),
   };
+}
+
+async function getRelatedUserIds(userId) {
+  const id = userId.toString();
+  const [contacts, messages] = await Promise.all([
+    Contact.find({ $or: [{ owner: id }, { contact: id }] })
+      .select('owner contact')
+      .lean(),
+    Message.find({ $or: [{ sender: id }, { receiver: id }] })
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .select('sender receiver')
+      .lean(),
+  ]);
+
+  const related = new Set();
+  for (const contact of contacts) {
+    related.add(contact.owner.toString());
+    related.add(contact.contact.toString());
+  }
+  for (const message of messages) {
+    related.add(message.sender.toString());
+    related.add(message.receiver.toString());
+  }
+  related.delete(id);
+  return related;
+}
+
+async function broadcastPresence(userId, online) {
+  const related = await getRelatedUserIds(userId);
+  if (related.size === 0) return;
+
+  const id = userId.toString();
+  if (online !== onlineSockets.has(id)) return;
+
+  let target = io;
+  for (const relatedId of related) {
+    target = target.to(`user:${relatedId}`);
+  }
+  target.emit('presence', { userId: id, online });
 }
 
 function serializeMessage(doc) {
@@ -239,14 +295,89 @@ app.get('/api/auth/me', auth, async (req, res) => {
   }
 });
 
-app.get('/api/users', apiLimiter, auth, async (req, res) => {
+async function listContacts(req, res) {
   try {
-    const users = await User.find({ _id: { $ne: req.userId } })
-      .select(PUBLIC_USER_FIELDS)
-      .sort({ name: 1 });
-    return res.json(users.map(publicUser));
+    const docs = await Contact.find({ owner: req.userId })
+      .populate('contact', PUBLIC_USER_FIELDS)
+      .sort({ createdAt: -1 });
+
+    const contacts = docs
+      .map((doc) => doc.contact)
+      .filter(Boolean)
+      .map(publicUser)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return res.json(contacts);
   } catch (err) {
-    console.error('Users error:', err.message);
+    console.error('Contacts error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+app.get('/api/users', apiLimiter, auth, listContacts);
+app.get('/api/contacts', apiLimiter, auth, listContacts);
+
+app.get('/api/contacts/search', apiLimiter, auth, async (req, res) => {
+  const email =
+    typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ message: 'Please provide a valid email address' });
+  }
+
+  try {
+    const user = await User.findOne({ email }).select(PUBLIC_USER_FIELDS);
+    if (!user) {
+      return res.status(404).json({ message: 'No user found with that email' });
+    }
+    if (user._id.toString() === req.userId) {
+      return res.status(400).json({ message: 'You cannot add yourself' });
+    }
+
+    const isContact = await Contact.exists({
+      owner: req.userId,
+      contact: user._id,
+    });
+
+    return res.json({ user: publicUser(user), isContact: Boolean(isContact) });
+  } catch (err) {
+    console.error('Contact search error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/contacts', apiLimiter, auth, async (req, res) => {
+  const email =
+    typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ message: 'Please provide a valid email address' });
+  }
+
+  try {
+    const contact = await User.findOne({ email }).select(PUBLIC_USER_FIELDS);
+    if (!contact) {
+      return res.status(404).json({ message: 'No user found with that email' });
+    }
+    if (contact._id.toString() === req.userId) {
+      return res.status(400).json({ message: 'You cannot add yourself' });
+    }
+
+    const existing = await Contact.exists({
+      owner: req.userId,
+      contact: contact._id,
+    });
+    if (existing) {
+      return res.status(409).json({ message: 'This user is already in your contacts' });
+    }
+
+    await Contact.create({ owner: req.userId, contact: contact._id });
+    return res.status(201).json(publicUser(contact));
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'This user is already in your contacts' });
+    }
+    console.error('Add contact error:', err.message);
     return res.status(500).json({ message: 'Server error' });
   }
 });
@@ -387,7 +518,27 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  socket.join(`user:${socket.userId}`);
+  const userId = socket.userId.toString();
+  socket.join(`user:${userId}`);
+
+  const firstConnection = !onlineSockets.has(userId);
+  if (firstConnection) onlineSockets.set(userId, new Set());
+  onlineSockets.get(userId).add(socket.id);
+
+  socket.on('disconnect', async () => {
+    const sockets = onlineSockets.get(userId);
+    if (!sockets) return;
+
+    sockets.delete(socket.id);
+    if (sockets.size > 0) return;
+
+    onlineSockets.delete(userId);
+    try {
+      await broadcastPresence(userId, false);
+    } catch (err) {
+      console.error('Presence broadcast error:', err.message);
+    }
+  });
 
   socket.on('send_message', async (payload, ack) => {
     const body = payload && typeof payload === 'object' ? payload : {};
@@ -419,6 +570,25 @@ io.on('connection', (socket) => {
       if (typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
+
+  (async () => {
+    try {
+      const related = await getRelatedUserIds(userId);
+      const online = [...related].filter((id) => onlineSockets.has(id));
+      socket.emit('presence_state', { online });
+    } catch (err) {
+      console.error('Presence state error:', err.message);
+      socket.emit('presence_state', { online: [] });
+    }
+
+    if (firstConnection && onlineSockets.has(userId)) {
+      try {
+        await broadcastPresence(userId, true);
+      } catch (err) {
+        console.error('Presence broadcast error:', err.message);
+      }
+    }
+  })();
 });
 
 function broadcastMessage(payload) {

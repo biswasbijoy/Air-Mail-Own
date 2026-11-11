@@ -4,6 +4,7 @@ import 'package:airmail/Screens/calls_screen.dart';
 import 'package:airmail/Screens/game_screen.dart';
 import 'package:airmail/Screens/login_screen.dart';
 import 'package:airmail/Screens/select_contact_page.dart';
+import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    RealtimeService.instance.connect(widget.session);
     _pages = [
       ChatPage(key: _chatPageKey, session: widget.session),
       SelectContact(session: widget.session),
@@ -32,7 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
+  @override
+  void dispose() {
+    RealtimeService.instance.disconnect();
+    super.dispose();
+  }
+
   Future<void> _logout() async {
+    RealtimeService.instance.disconnect();
     await SessionStore.clear();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

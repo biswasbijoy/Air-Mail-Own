@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:airmail/DesignUI/custom_card.dart';
 import 'package:airmail/DesignUI/empty_state.dart';
 import 'package:airmail/Model/chat_model.dart';
+import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/Screens/indivisual_page.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
 import 'package:airmail/utils/time_format.dart';
@@ -22,13 +26,32 @@ class ChatPage extends StatefulWidget {
 
 class ChatPageState extends State<ChatPage> {
   final List<ChatModel> _chats = [];
+  StreamSubscription<MessageModel>? _messageSubscription;
   bool _loading = true;
+  bool _refreshQueued = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _messageSubscription =
+        RealtimeService.instance.messages.listen((_) => _scheduleRefresh());
     _loadChats(showSpinner: true);
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleRefresh() {
+    if (_refreshQueued) return;
+    _refreshQueued = true;
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      _refreshQueued = false;
+      if (mounted) _loadChats();
+    });
   }
 
   Future<void> refresh() => _loadChats();
@@ -57,6 +80,8 @@ class ChatPageState extends State<ChatPage> {
       for (final chat in chats) {
         chat.time = formatTimestamp(chat.lastMessageAt);
       }
+
+      RealtimeService.instance.updateOnlineStatuses(chats);
 
       setState(() {
         _chats

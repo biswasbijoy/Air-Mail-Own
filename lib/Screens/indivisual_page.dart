@@ -1,14 +1,16 @@
+import 'dart:async';
+
 import 'package:airmail/DesignUI/app_avatar.dart';
 import 'package:airmail/DesignUI/empty_state.dart';
 import 'package:airmail/DesignUI/message_bubble.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
 import 'package:airmail/utils/time_format.dart';
 import 'package:flutter/material.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 
 class IndivisualPage extends StatefulWidget {
   const IndivisualPage({
@@ -27,7 +29,7 @@ class IndivisualPage extends StatefulWidget {
 class _IndivisualPageState extends State<IndivisualPage> {
   final TextEditingController _controller = TextEditingController();
   final List<MessageModel> _messages = [];
-  io.Socket? _socket;
+  StreamSubscription<MessageModel>? _messageSubscription;
 
   bool _loading = true;
   bool _sending = false;
@@ -38,13 +40,14 @@ class _IndivisualPageState extends State<IndivisualPage> {
   @override
   void initState() {
     super.initState();
+    _messageSubscription =
+        RealtimeService.instance.messages.listen(_handleIncomingMessage);
     _loadMessages();
-    _connectSocket();
   }
 
   @override
   void dispose() {
-    _socket?.dispose();
+    _messageSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -85,31 +88,13 @@ class _IndivisualPageState extends State<IndivisualPage> {
     }
   }
 
-  void _connectSocket() {
-    final socket = io.io(
-      ApiService.baseUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
-          .disableAutoConnect()
-          .setAuth({'token': widget.session.token})
-          .build(),
-    );
+  void _handleIncomingMessage(MessageModel message) {
+    final otherId = _otherUserId;
+    if (!mounted || otherId == null) return;
+    if (message.senderId != otherId && message.receiverId != otherId) return;
+    if (_messages.any((item) => item.id == message.id)) return;
 
-    socket.on('new_message', (data) {
-      if (!mounted || data is! Map) return;
-
-      final message = MessageModel.fromJson(Map<String, dynamic>.from(data));
-      final otherId = _otherUserId;
-      if (message.senderId != otherId && message.receiverId != otherId) return;
-      if (_messages.any((item) => item.id == message.id)) return;
-
-      setState(() => _messages.add(message));
-    });
-    socket.onConnectError((_) {});
-    socket.onError((_) {});
-
-    _socket = socket;
-    socket.connect();
+    setState(() => _messages.add(message));
   }
 
   Future<void> _send() async {
@@ -188,35 +173,45 @@ class _IndivisualPageState extends State<IndivisualPage> {
     return Scaffold(
       appBar: AppBar(
         leadingWidth: 40,
-        title: Row(
-          children: [
-            AppAvatar(
-              name: widget.chatModel.name,
-              size: 38,
-              online: widget.chatModel.status == 'online',
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.chatModel.name ?? 'Chat',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+        title: ValueListenableBuilder<Set<String>>(
+          valueListenable: RealtimeService.instance.onlineUsers,
+          builder: (context, _, __) {
+            final online = RealtimeService.instance.effectiveOnline(
+              _otherUserId,
+              fallback: widget.chatModel.status == 'online',
+            );
+
+            return Row(
+              children: [
+                AppAvatar(
+                  name: widget.chatModel.name,
+                  size: 38,
+                  online: online,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.chatModel.name ?? 'Chat',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        online ? 'Online' : 'Offline',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                  Text(
-                    widget.chatModel.status == 'online' ? 'Online' : 'Offline',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
         actions: [
           IconButton(

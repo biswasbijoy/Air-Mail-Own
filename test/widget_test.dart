@@ -2,6 +2,7 @@ import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/Screens/login_screen.dart';
 import 'package:airmail/main.dart';
+import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +67,7 @@ void main() {
     expect(chat.name, 'Other');
     expect(chat.currentMessage, 'Hello');
     expect(chat.lastMessageAt, isNotNull);
+    expect(chat.status, 'offline');
 
     final message = MessageModel.fromJson({
       '_id': 'message-1',
@@ -79,5 +81,33 @@ void main() {
     expect(message.senderId, 'user-1');
     expect(message.receiverId, 'user-2');
     expect(message.message, 'Hi');
+  });
+
+  test('parses online status and tracks presence updates', () {
+    final onlineUser = ChatModel.fromUserJson({
+      'id': 'user-3',
+      'name': 'Online User',
+      'email': 'online@example.com',
+      'online': true,
+    });
+
+    expect(onlineUser.status, 'online');
+
+    final realtime = RealtimeService.instance;
+    realtime.disconnect();
+    addTearDown(realtime.disconnect);
+
+    realtime.updateOnlineStatuses([
+      onlineUser,
+      ChatModel(id: 'user-4', status: 'offline'),
+    ]);
+
+    expect(realtime.isOnline('user-3'), isTrue);
+    expect(realtime.isOnline('user-4'), isFalse);
+
+    realtime.updateOnlineStatuses([
+      ChatModel(id: 'user-3', status: 'offline'),
+    ]);
+    expect(realtime.isOnline('user-3'), isFalse);
   });
 }

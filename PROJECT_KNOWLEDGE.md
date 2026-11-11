@@ -2,9 +2,10 @@
 
 ## Project Overview
 AirMail is a Flutter messaging app backed by Node.js/Express/MongoDB. It
-supports JWT authentication, persisted sessions, a contact list, conversation
-history, HTTP message sending, and real-time delivery through Socket.IO. The UI
-uses the Midnight Cyan theme with automatic light/dark mode.
+supports JWT authentication, persisted sessions, per-user contacts added by
+email, online/offline presence, conversation history, HTTP message sending, and
+real-time delivery through Socket.IO. The UI uses the Midnight Cyan theme with
+automatic light/dark mode.
 
 ## Tech Stack
 
@@ -47,7 +48,8 @@ air_mail/
 │   │   ├── chat_model.dart        # Contact/conversation model + JSON parsing
 │   │   └── message_model.dart     # Message model + JSON parsing
 │   ├── services/
-│   │   ├── api_service.dart       # REST client, auth headers, API errors
+│   │   ├── api_service.dart       # REST client, contacts, auth headers, errors
+│   │   ├── realtime_service.dart  # Socket.IO presence + message events
 │   │   └── session.dart           # SharedPreferences session store
 │   ├── utils/time_format.dart     # Human-readable timestamps
 │   ├── theme/                     # AppColors + light/dark ThemeData
@@ -55,8 +57,9 @@ air_mail/
 │   ├── Screens/
 │   │   ├── login_screen.dart      # Login/register
 │   │   ├── home_screen.dart       # 4-tab shell, drawer, logout
-│   │   ├── select_contact_page.dart
-│   │   ├── indivisual_page.dart   # Chat screen (REST + Socket.IO)
+│   │   ├── select_contact_page.dart # Contact-only list + add button
+│   │   ├── add_contact_page.dart  # Email lookup and add contact
+│   │   ├── indivisual_page.dart   # Chat screen (REST + realtime events)
 │   │   ├── calls_screen.dart      # Demo call list
 │   │   ├── game_screen.dart       # Games hub
 │   │   └── Splash/                # Optional intro flow
@@ -90,7 +93,10 @@ air_mail/
 | POST | `/api/auth/register` | No | Create account |
 | POST | `/api/auth/login` | No | Sign in |
 | GET | `/api/auth/me` | Yes | Current user |
-| GET | `/api/users` | Yes | Contacts (excludes current user) |
+| GET | `/api/contacts` | Yes | Current user's contact list |
+| GET | `/api/contacts/search?email=` | Yes | Look up a user by exact email |
+| POST | `/api/contacts` | Yes | Add a user to contacts by email |
+| GET | `/api/users` | Yes | Deprecated alias for `/api/contacts` |
 | GET | `/api/chats` | Yes | Conversations with last message |
 | POST | `/api/messages` | Yes | Send message (sender comes from JWT) |
 | GET | `/api/messages/:userId` | Yes | Conversation history |
@@ -98,22 +104,33 @@ air_mail/
 All protected routes use JWT middleware. Message senders are derived from the
 verified token rather than trusting a client-supplied sender ID.
 
-## Real-Time Messaging
+## Real-Time Messaging And Presence
 
 - The server authenticates Socket.IO connections with the JWT (`auth.token`).
-- Each socket joins `user:<id>`.
+- Each socket joins `user:<id>`; `RealtimeService` owns the single app-wide
+  connection and exposes new messages and the online user set.
 - `POST /api/messages` and the socket `send_message` event save the message and
   emit `new_message` to both participants' rooms.
-- `IndivisualPage` listens for `new_message`, filters events for the open
-  conversation, and de-duplicates by message ID. Sending itself uses the REST
-  endpoint so failures surface directly in the UI.
-- Clients also support sending through the socket with an ack callback.
+- `IndivisualPage` filters `new_message` events for the open conversation and
+  de-duplicates by message ID. Sending itself uses the REST endpoint so failures
+  surface directly in the UI.
+- `ChatPage` refreshes its conversation list when a new message arrives, so a
+  first message appears immediately without waiting for a reply.
+- The server tracks connected sockets per user. On connect it emits
+  `presence_state` with related online users; users' contacts and chat partners
+  receive `presence` updates when someone goes online or offline.
+- API user payloads include `online`, used as the initial status until a
+  presence event arrives.
 
 ## Database Schema
 
 ### User
 - `name`, `email` (unique, lowercase), `password` (bcrypt hash), `createdAt`
 - Passwords are never returned by the API.
+
+### Contact
+- `owner` (ObjectId ref User), `contact` (ObjectId ref User), `createdAt`
+- Unique per owner/contact pair; contacts are one-way and per-user.
 
 ### Message
 - `sender` (ObjectId ref User), `receiver` (ObjectId ref User)
@@ -127,8 +144,9 @@ verified token rather than trusting a client-supplied sender ID.
 | `login_screen.dart` | Sign in / register with validation and error handling |
 | `home_screen.dart` | Inbox, Contacts, Calls, Games tabs; drawer; logout |
 | `chat_page.dart` | Live conversation list with pull-to-refresh |
-| `select_contact_page.dart` | Searchable contacts; tap to chat |
-| `indivisual_page.dart` | Message history, send, real-time receive |
+| `select_contact_page.dart` | User-added contacts only; add button; tap to chat |
+| `add_contact_page.dart` | Look up a user by email and add them |
+| `indivisual_page.dart` | Message history, send, real-time receive, presence |
 | `calls_screen.dart` | Demo call history (calls not implemented) |
 | `game_screen.dart` | Games hub |
 | `Games/*` | Working local Rock Paper Scissors, Tic Tac Toe, Color Guess |
@@ -179,15 +197,18 @@ node --check backend/server.js
 ## Known Limitations
 - Calls are a demo list; no voice/video backend.
 - Games are local two-player/computer games; no online multiplayer.
-- No push notifications, unread badges, typing indicators, or presence tracking.
+- No push notifications, unread badges, or typing indicators.
+- Presence is in-memory; a server restart clears it until clients reconnect.
 - No offline message queue; send failures are shown and can be retried.
 - Session expiration requires signing in again (no refresh token).
+- Contacts are one-way and must be added by each user.
 - Contact avatars use initials for real users; demo screens use bundled images.
 
 ## Future Enhancements
 - [ ] Message deletion, editing, and search
 - [ ] Push notifications and unread counts
-- [ ] Online presence and typing indicators
+- [ ] Typing indicators
+- [ ] Contact removal and contact requests
 - [ ] Profile editing and avatar uploads
 - [ ] Voice/video calls
 - [ ] Refresh tokens / silent re-authentication

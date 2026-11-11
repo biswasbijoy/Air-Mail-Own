@@ -16,6 +16,13 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class ContactLookup {
+  const ContactLookup({required this.user, required this.isContact});
+
+  final ChatModel user;
+  final bool isContact;
+}
+
 class ApiService {
   ApiService({required this.token});
 
@@ -94,13 +101,41 @@ class ApiService {
         .toList();
   }
 
-  Future<List<ChatModel>> fetchUsers() async {
-    final data = await _get('/api/users');
+  Future<List<ChatModel>> fetchContacts() async {
+    final data = await _get('/api/contacts');
     if (data is! List) return [];
     return data
         .whereType<Map>()
         .map((item) => ChatModel.fromUserJson(Map<String, dynamic>.from(item)))
         .toList();
+  }
+
+  Future<ContactLookup> searchContact(String email) async {
+    final data = await _get(
+      '/api/contacts/search?email=${Uri.encodeQueryComponent(email)}',
+    );
+    if (data is! Map) {
+      throw const ApiException('Unexpected server response');
+    }
+
+    final map = Map<String, dynamic>.from(data);
+    final user = map['user'];
+    if (user is! Map) {
+      throw const ApiException('Unexpected server response');
+    }
+
+    return ContactLookup(
+      user: ChatModel.fromUserJson(Map<String, dynamic>.from(user)),
+      isContact: map['isContact'] == true,
+    );
+  }
+
+  Future<ChatModel> addContact(String email) async {
+    final data = await _post('/api/contacts', {'email': email});
+    if (data is! Map) {
+      throw const ApiException('Unexpected server response');
+    }
+    return ChatModel.fromUserJson(Map<String, dynamic>.from(data));
   }
 
   Future<List<MessageModel>> fetchMessages(String userId) async {
@@ -116,13 +151,10 @@ class ApiService {
     required String receiverId,
     required String message,
   }) async {
-    final data = await _send(
-      () => http.post(
-        Uri.parse('$baseUrl/api/messages'),
-        headers: _headers,
-        body: jsonEncode({'receiverId': receiverId, 'message': message}),
-      ),
-    );
+    final data = await _post('/api/messages', {
+      'receiverId': receiverId,
+      'message': message,
+    });
 
     if (data is! Map) {
       throw const ApiException('Unexpected server response');
@@ -138,6 +170,16 @@ class ApiService {
   Future<dynamic> _get(String path) {
     return _send(
       () => http.get(Uri.parse('$baseUrl$path'), headers: _headers),
+    );
+  }
+
+  Future<dynamic> _post(String path, Map<String, dynamic> body) {
+    return _send(
+      () => http.post(
+        Uri.parse('$baseUrl$path'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
     );
   }
 
@@ -161,7 +203,8 @@ class ApiService {
     } on TimeoutException {
       throw const ApiException('The request timed out. Please try again.');
     } catch (_) {
-      throw const ApiException('Connection error. Check your network and try again.');
+      throw const ApiException(
+          'Connection error. Check your network and try again.');
     }
   }
 
