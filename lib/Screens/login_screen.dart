@@ -1,272 +1,223 @@
-import 'dart:convert';
-import 'package:airmail/DesignUI/button_card.dart';
-import 'package:airmail/Model/chat_model.dart';
-import 'package:airmail/Screens/homeScreen.dart';
+import 'package:airmail/Screens/home_screen.dart';
+import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
-import 'package:airmail/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({Key? key}) : super(key: key);
-  static String routeName = "/login";
+  const LoginScreen({super.key});
+  static String routeName = '/login';
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late ChatModel sourceChat;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+
   bool _isLogin = true;
   bool _isLoading = false;
-  bool _hidden = true;
-  String? _token;
-  String? _userId;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _authenticate() async {
+    if (!_formKey.currentState!.validate() || _isLoading) return;
+
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
+
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      final session = _isLogin
+          ? await ApiService.login(email: email, password: password)
+          : await ApiService.register(
+              name: _nameController.text.trim(),
+              email: email,
+              password: password,
+            );
+
+      await SessionStore.save(session);
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
+      );
+    } on ApiException catch (error) {
+      _showError(error.message);
+    } catch (_) {
+      _showError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isLogin = !_isLogin;
+      _emailController.clear();
+      _passwordController.clear();
+      _nameController.clear();
+      _obscurePassword = true;
+    });
+    _formKey.currentState?.reset();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Continue as"),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.darkBg,
-                AppColors.darkSurface,
-                AppColors.darkRaised,
-              ],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
-            ),
-          ),
-        ),
-        elevation: 4,
-      ),
-      backgroundColor: AppColors.darkBg,
+      appBar: AppBar(title: const Text('AirMail')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                const Icon(
-                  Icons.message,
-                  size: 80,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _isLogin ? 'Sign In' : 'Register',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Name field (only for registration)
-                if (!_isLogin)
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      hintText: 'Enter your name',
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColors.onPrimary),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(Icons.message, size: 72, color: scheme.primary),
+                    const SizedBox(height: 20),
+                    Text(
+                      _isLogin ? 'Welcome back' : 'Create your account',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isLogin
+                          ? 'Sign in to continue chatting.'
+                          : 'Register to start messaging.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 28),
+                    if (!_isLogin) ...[
+                      TextFormField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Full name',
+                          hintText: 'Enter your name',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) return 'Please enter your name';
+                          if (text.length > 80) return 'Name is too long';
+                          return null;
+                        },
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppColors.primary),
+                      const SizedBox(height: 14),
+                    ],
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'you@example.com',
+                        prefixIcon: Icon(Icons.mail_outline),
                       ),
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) return 'Please enter an email';
+                        final emailPattern =
+                            RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                        if (!emailPattern.hasMatch(text)) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                  ),
-                const SizedBox(height: 15),
-
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter your email',
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.onPrimary),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primary),
-                    ),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 15),
-
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.onPrimary),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primary),
-                    ),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 25),
-
-                // Submit button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        setState(() => _isLoading = true);
-                        _authenticate();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      foregroundColor: AppColors.onPrimary,
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: AppColors.onPrimary,
-                          )
-                        : Text(
-                            _isLogin ? 'Sign In' : 'Register',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: AppColors.onPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _authenticate(),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'At least 6 characters',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
                           ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                // Toggle login/register
-                TextButton(
-                  onPressed: () {
-                    setState(() => _isLogin = !_isLogin);
-                    _emailController.clear();
-                    _passwordController.clear();
-                    _nameController.clear();
-                  },
-                  child: Text(
-                    _isLogin
-                        ? 'Create a new account'
-                        : 'Have an account? Sign in',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: AppColors.darkMuted,
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        final text = value ?? '';
+                        if (text.isEmpty) return 'Please enter a password';
+                        if (text.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _authenticate,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.onPrimary,
+                              ),
+                            )
+                          : Text(_isLogin ? 'Sign in' : 'Register'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _isLoading ? null : _toggleMode,
+                      child: Text(
+                        _isLogin
+                            ? 'Create a new account'
+                            : 'Already have an account? Sign in',
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _authenticate() async {
-    final String url = 'https://airmail-backend.onrender.com/api/auth/${_isLogin ? 'login' : 'register'}';
-
-    try {
-      final Map<String, dynamic> requestBody;
-      if (_isLogin) {
-        requestBody = {
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        };
-      } else {
-        requestBody = {
-          'name': _nameController.text,
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(requestBody),
-      );
-
-      final responseData = json.decode(response.body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        setState(() {
-          _token = responseData['token'];
-          _userId = responseData['user']['id'];
-        });
-
-        // Navigate to home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (builder) => HomeScreen(
-              chatmodels: [],
-              sourceChat: ChatModel(
-                name: _isLogin ? responseData['user']['email'] : _nameController.text,
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                email: _emailController.text,
-              ),
-            ),
-          ),
-        );
-      } else {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'] ?? 'Authentication failed')),
-        );
-      }
-    } catch (error) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connection error. Please try again.')),
-      );
-    }
   }
 }

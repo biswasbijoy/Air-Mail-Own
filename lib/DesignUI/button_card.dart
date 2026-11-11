@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ButtonCard extends StatelessWidget {
-  const ButtonCard({Key? key, required this.name, required this.icon})
-      : super(key: key);
+  const ButtonCard({super.key, required this.name, required this.icon});
   final String name;
   final IconData icon;
 
@@ -11,16 +10,16 @@ class ButtonCard extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         radius: 25,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: Icon(
           icon,
           size: 35,
           color: Colors.black,
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       title: Text(
         name,
-        style: TextStyle(
+        style: const TextStyle(
             fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
       ),
     );

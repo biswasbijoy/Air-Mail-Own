@@ -1,56 +1,44 @@
 import 'package:flutter/material.dart';
 
 class HowToPlay extends StatelessWidget {
-  const HowToPlay({Key? key}) : super(key: key);
+  const HowToPlay({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: const Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('How to Play'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('How to Play')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Game Rules',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            Text(
+              'Game rules',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 20),
-            _buildRuleItem('Rock beats Scissors', context),
-            _buildRuleItem('Scissors beats Paper', context),
-            _buildRuleItem('Paper beats Rock', context),
-            const SizedBox(height: 30),
-            const Text(
-              'How to Play',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            const SizedBox(height: 16),
+            _RuleItem(text: 'Rock beats scissors', color: scheme.primary),
+            _RuleItem(text: 'Scissors beats paper', color: scheme.primary),
+            _RuleItem(text: 'Paper beats rock', color: scheme.primary),
+            const SizedBox(height: 28),
+            Text(
+              'How to play',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 10),
-            _buildStepItem('1. Choose Rock, Paper, or Scissors'),
-            _buildStepItem('2. Wait for your opponent to choose'),
-            _buildStepItem('3. See who wins based on the rules'),
-            const SizedBox(height: 30),
+            const SizedBox(height: 12),
+            const _StepItem(index: 1, text: 'Choose rock, paper, or scissors.'),
+            const _StepItem(index: 2, text: 'The computer makes its choice.'),
+            const _StepItem(
+              index: 3,
+              text: 'The winner is decided by the rules above.',
+            ),
+            const SizedBox(height: 28),
             Center(
               child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.black,
-                ),
-                child: const Text('Back to Game'),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Back to game'),
               ),
             ),
           ],
@@ -58,61 +46,64 @@ class HowToPlay extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildRuleItem(String text, BuildContext context) {
+class _RuleItem extends StatelessWidget {
+  const _RuleItem({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle,
-            color: Theme.of(context).colorScheme.primary,
-            size: 24,
-          ),
+          Icon(Icons.check_circle, color: color, size: 24),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
+            child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStepItem(String text, {int index = 0}) {
+class _StepItem extends StatelessWidget {
+  const _StepItem({required this.index, required this.text});
+
+  final int index;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: scheme.primary.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '${index + 1}',
-              style: const TextStyle(
-                color: Colors.black,
+              '$index',
+              style: TextStyle(
+                color: scheme.primary,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
               ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
+            child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
           ),
         ],
       ),

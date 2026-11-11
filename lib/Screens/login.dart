@@ -2,12 +2,12 @@ import 'package:airmail/Screens/login_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatelessWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
   static String routeName = "/login";
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: LoginScreen(),
     );
   }

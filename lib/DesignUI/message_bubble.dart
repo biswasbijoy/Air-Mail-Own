@@ -18,7 +18,9 @@ class MessageBubble extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final bg = isMine ? AppColors.primary : scheme.surfaceContainerHighest;
     final fg = isMine ? AppColors.onPrimary : scheme.onSurface;
-    final timeColor = isMine ? AppColors.onPrimary.withOpacity(0.7) : scheme.onSurfaceVariant;
+    final timeColor = isMine
+        ? AppColors.onPrimary.withValues(alpha: 0.7)
+        : scheme.onSurfaceVariant;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,

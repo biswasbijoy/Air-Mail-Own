@@ -26,7 +26,7 @@ class AppAvatar extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.18),
+              color: AppColors.primary.withValues(alpha: 0.18),
             ),
             child: Text(
               initial,
@@ -46,7 +46,9 @@ class AppAvatar extends StatelessWidget {
                 height: dot,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: online! ? const Color(0xFF34D399) : scheme.onSurfaceVariant,
+                  color: online!
+                      ? const Color(0xFF34D399)
+                      : scheme.onSurfaceVariant,
                   border: Border.all(color: scheme.surface, width: 2),
                 ),
               ),

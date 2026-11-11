@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  const CameraScreen({super.key});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -12,61 +12,61 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   File? imageFile;
-  void _getFromCamera() async {
-    XFile? pickedFile = await ImagePicker().pickImage(
+
+  Future<void> _getFromCamera() async {
+    final pickedFile = await ImagePicker().pickImage(
       source: ImageSource.camera,
     );
 
+    if (pickedFile == null || !mounted) return;
+
     setState(() {
-      imageFile = File(pickedFile!.path);
+      imageFile = File(pickedFile.path);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      body: ListView(
-        children: [
-          SizedBox(height: 50),
-          imageFile != null
-              ? Stack(
-                  children: [
-                    Container(
-                      child: Image.file(imageFile!),
-                    ),
-                    Positioned(
-                        child: CircleAvatar(
-                          radius: MediaQuery.of(context).size.width * 0.08,
-                          child: Icon(
-                            Icons.done,
-                            size: MediaQuery.of(context).size.width * 0.13,
-                            color: Colors.purpleAccent[400],
-                          ),
-                          backgroundColor: Colors.amber[100],
-                        ),
-                        bottom: 12,
-                        right: 10),
-                  ],
-                )
-              : Container(
-                  height: MediaQuery.of(context).size.height * 0.3,
-                  width: double.infinity,
+      appBar: AppBar(title: const Text('Camera')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-          Spacer(),
-          Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: IconButton(
-              onPressed: () {
-                _getFromCamera();
-              },
-              icon: Icon(
-                Icons.photo_camera_outlined,
-                color: Colors.purpleAccent[400],
-                size: MediaQuery.of(context).size.width * 0.1,
+                clipBehavior: Clip.antiAlias,
+                child: imageFile == null
+                    ? Center(
+                        child: Icon(
+                          Icons.photo_camera_outlined,
+                          size: 72,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      )
+                    : Image.file(imageFile!, fit: BoxFit.cover),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _getFromCamera,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: Text(
+                  imageFile == null ? 'Take a photo' : 'Retake photo',
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

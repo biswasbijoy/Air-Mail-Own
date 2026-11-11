@@ -3,9 +3,9 @@ import 'package:airmail/theme/app_colors.dart';
 
 class UserSideCard extends StatelessWidget {
   const UserSideCard({
-    Key? key,
+    super.key,
     required this.name,
-  }) : super(key: key);
+  });
 
   final String name;
 
@@ -16,7 +16,7 @@ class UserSideCard extends StatelessWidget {
       children: [
         Text(
           name,
-          style: TextStyle(
+          style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold),
@@ -27,7 +27,7 @@ class UserSideCard extends StatelessWidget {
           color: Color(0x33ffffff),
           thickness: 2,
         ),
-        Text(
+        const Text(
           "Flutter Developer || Data Science Intern\nGoogle Certified Data Analyst\nMachine Learning Enthusiast\nCompetitive Programmer",
           style: TextStyle(
               color: AppColors.darkMuted,
@@ -40,7 +40,7 @@ class UserSideCard extends StatelessWidget {
           color: Color(0x33ffffff),
           thickness: 2,
         ),
-        Text(
+        const Text(
           "Hey there, I am Bijoy Biswas, iOS developer and Data Science intern. I love developing amazing applications, puzzles are my favourite! I am also a competitive programmer and a Machine Learning enthusiast. I am also a Google Certified Data Analyst.",
           style: TextStyle(
               color: Colors.white,
@@ -67,11 +67,11 @@ class UserSideCard extends StatelessWidget {
         ),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/call.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             "+8801719868313",
             style: TextStyle(
                 color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
@@ -80,11 +80,11 @@ class UserSideCard extends StatelessWidget {
         const SizedBox(height: 2),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/facebook.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             "@biswasbijoy414",
             style: TextStyle(
                 color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.bold),
@@ -93,11 +93,11 @@ class UserSideCard extends StatelessWidget {
         const SizedBox(height: 2),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/linkedin.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             "@biswasbijoy",
             style: TextStyle(
                 color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.bold),
@@ -106,11 +106,11 @@ class UserSideCard extends StatelessWidget {
         const SizedBox(height: 2),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/gmail.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             'biswasbijoy414@gmail.com',
             style: TextStyle(
                 color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.bold),
@@ -119,11 +119,11 @@ class UserSideCard extends StatelessWidget {
         const SizedBox(height: 2),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/telegram.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             '@bijoy414',
             style: TextStyle(
                 color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.bold),
@@ -132,11 +132,11 @@ class UserSideCard extends StatelessWidget {
         const SizedBox(height: 2),
         ListTile(
           onTap: () {},
-          leading: CircleAvatar(
+          leading: const CircleAvatar(
             backgroundImage: AssetImage('assets/images/github.jpg'),
             radius: 30,
           ),
-          title: Text(
+          title: const Text(
             'biswasbijoy',
             style: TextStyle(
                 color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.bold),

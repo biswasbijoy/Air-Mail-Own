@@ -1,29 +1,20 @@
 import 'package:flutter/material.dart';
 
 class SplashContents extends StatelessWidget {
-  const SplashContents({
-    Key? key,
-  }) : super(key: key);
+  const SplashContents({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Welcome to',
-          style: TextStyle(
-            fontSize: 20,
-            color: Color(0x88ffffff),
-          ),
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const Text(
+        Text(
           'AirMail',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
       ],
     );

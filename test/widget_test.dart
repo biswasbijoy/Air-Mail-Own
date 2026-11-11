@@ -1,30 +1,83 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:airmail/Model/chat_model.dart';
+import 'package:airmail/Model/message_model.dart';
+import 'package:airmail/Screens/login_screen.dart';
+import 'package:airmail/main.dart';
+import 'package:airmail/services/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:airmail/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('shows the sign-in screen when no session is saved',
+      (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('switches between sign-in and registration',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.text('Create a new account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create your account'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(3));
+  });
+
+  test('session is persisted and cleared', () async {
+    const session = Session(
+      token: 'token-123',
+      userId: 'user-1',
+      name: 'Test User',
+      email: 'test@example.com',
+    );
+
+    await SessionStore.save(session);
+    final loaded = await SessionStore.load();
+
+    expect(loaded, isNotNull);
+    expect(loaded!.token, 'token-123');
+    expect(loaded.userId, 'user-1');
+    expect(loaded.name, 'Test User');
+    expect(loaded.email, 'test@example.com');
+
+    await SessionStore.clear();
+    expect(await SessionStore.load(), isNull);
+  });
+
+  test('parses chat and message payloads from the API', () {
+    final chat = ChatModel.fromChatJson({
+      'user': {'id': 'user-2', 'name': 'Other', 'email': 'other@example.com'},
+      'lastMessage': 'Hello',
+      'lastMessageAt': '2026-01-01T10:00:00.000Z',
+    });
+
+    expect(chat.id, 'user-2');
+    expect(chat.name, 'Other');
+    expect(chat.currentMessage, 'Hello');
+    expect(chat.lastMessageAt, isNotNull);
+
+    final message = MessageModel.fromJson({
+      '_id': 'message-1',
+      'sender': 'user-1',
+      'receiver': 'user-2',
+      'message': 'Hi',
+      'createdAt': '2026-01-01T10:00:00.000Z',
+    });
+
+    expect(message.id, 'message-1');
+    expect(message.senderId, 'user-1');
+    expect(message.receiverId, 'user-2');
+    expect(message.message, 'Hi');
   });
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../Model/chat_model.dart';
 import 'app_avatar.dart';
 
 class CustomCard extends StatelessWidget {
-  final dynamic chatModel;
+  final ChatModel chatModel;
   final VoidCallback? onTap;
 
   const CustomCard({super.key, required this.chatModel, this.onTap});
@@ -11,6 +11,8 @@ class CustomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOnline = chatModel.status == 'online';
+    final icon = chatModel.icon;
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -18,11 +20,10 @@ class CustomCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            AppAvatar(
-              name: chatModel.name,
-              size: 52,
-              online: isOnline,
-            ),
+            if (icon != null && icon.isNotEmpty)
+              CircleAvatar(radius: 26, backgroundImage: AssetImage(icon))
+            else
+              AppAvatar(name: chatModel.name, size: 52, online: isOnline),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -37,7 +38,7 @@ class CustomCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    chatModel.currentMessage ?? '',
+                    chatModel.currentMessage ?? 'Start the conversation',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium,

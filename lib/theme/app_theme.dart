@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
 class AppTheme {
@@ -7,7 +8,7 @@ class AppTheme {
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           brightness: Brightness.dark,
           primary: AppColors.primary,
           onPrimary: AppColors.onPrimary,
@@ -23,27 +24,28 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: AppColors.darkBg,
         dividerColor: AppColors.darkBorder,
-        textTheme: TextTheme(
+        textTheme: const TextTheme(
           titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.darkText),
           titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.darkText),
           bodyLarge: TextStyle(fontSize: 15, color: AppColors.darkText),
           bodyMedium: TextStyle(fontSize: 14, color: AppColors.darkMuted),
           bodySmall: TextStyle(fontSize: 12, color: AppColors.darkMuted),
-          labelLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.darkSurface,
           foregroundColor: AppColors.darkText,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: false,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
           titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.darkText),
           iconTheme: IconThemeData(color: AppColors.darkText),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppColors.darkRaised,
-          hintStyle: TextStyle(color: AppColors.darkMuted),
+          hintStyle: const TextStyle(color: AppColors.darkMuted),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -59,11 +61,11 @@ class AppTheme {
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.darkError, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.darkError, width: 1.5),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.darkError, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.darkError, width: 1.5),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -79,12 +81,12 @@ class AppTheme {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(foregroundColor: AppColors.primaryLightMode),
         ),
-        tabBarTheme: TabBarThemeData(
+        tabBarTheme: const TabBarThemeData(
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.darkMuted,
           indicatorColor: AppColors.primary,
           dividerColor: AppColors.darkBorder,
-          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: AppColors.primary,
@@ -94,7 +96,7 @@ class AppTheme {
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.darkRaised,
-          contentTextStyle: TextStyle(color: AppColors.darkText),
+          contentTextStyle: const TextStyle(color: AppColors.darkText),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
@@ -102,7 +104,7 @@ class AppTheme {
   static ThemeData get light => ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        colorScheme: ColorScheme.light(
+        colorScheme: const ColorScheme.light(
           brightness: Brightness.light,
           primary: AppColors.primary,
           onPrimary: AppColors.onPrimary,
@@ -118,27 +120,28 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: AppColors.lightBg,
         dividerColor: AppColors.lightBorder,
-        textTheme: TextTheme(
+        textTheme: const TextTheme(
           titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.lightText),
           titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.lightText),
           bodyLarge: TextStyle(fontSize: 15, color: AppColors.lightText),
           bodyMedium: TextStyle(fontSize: 14, color: AppColors.lightMuted),
           bodySmall: TextStyle(fontSize: 12, color: AppColors.lightMuted),
-          labelLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.lightSurface,
           foregroundColor: AppColors.lightText,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: false,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
           titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.lightText),
           iconTheme: IconThemeData(color: AppColors.lightText),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppColors.lightRaised,
-          hintStyle: TextStyle(color: AppColors.lightMuted),
+          hintStyle: const TextStyle(color: AppColors.lightMuted),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -154,11 +157,11 @@ class AppTheme {
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.lightError, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.lightError, width: 1.5),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.lightError, width: 1.5),
+            borderSide: const BorderSide(color: AppColors.lightError, width: 1.5),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -174,12 +177,12 @@ class AppTheme {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(foregroundColor: AppColors.primaryLightMode),
         ),
-        tabBarTheme: TabBarThemeData(
+        tabBarTheme: const TabBarThemeData(
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.lightMuted,
           indicatorColor: AppColors.primary,
           dividerColor: AppColors.lightBorder,
-          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: AppColors.primary,
@@ -189,7 +192,7 @@ class AppTheme {
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.lightRaised,
-          contentTextStyle: TextStyle(color: AppColors.lightText),
+          contentTextStyle: const TextStyle(color: AppColors.lightText),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );

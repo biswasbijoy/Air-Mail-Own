@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -26,9 +25,24 @@ class EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 64, color: scheme.onSurfaceVariant),
             const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
-            Text(subtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (onPressed != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.tonal(
+                onPressed: onPressed,
+                child: const Text('Try again'),
+              ),
+            ],
           ],
         ),
       ),

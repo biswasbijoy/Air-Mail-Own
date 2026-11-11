@@ -1,219 +1,131 @@
-import 'package:flutter/material.dart';
 import 'package:airmail/theme/app_colors.dart';
+import 'package:flutter/material.dart';
 
-class DeveloperScreenUI extends StatefulWidget {
-  const DeveloperScreenUI({Key? key}) : super(key: key);
+class DeveloperScreenUI extends StatelessWidget {
+  const DeveloperScreenUI({super.key});
 
-  @override
-  _DeveloperScreenUIState createState() => _DeveloperScreenUIState();
-}
+  static const _contactItems = [
+    _ContactItem(
+      iconAsset: 'assets/images/call.jpg',
+      label: '+8801719868313',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/facebook.jpg',
+      label: '@biswasbijoy414',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/linkedin.jpg',
+      label: '@biswasbijoy',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/gmail.jpg',
+      label: 'biswasbijoy414@gmail.com',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/telegram.jpg',
+      label: '@bijoy414',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/twitter.jpg',
+      label: '@biswasbijoy_414',
+    ),
+    _ContactItem(
+      iconAsset: 'assets/images/github.jpg',
+      label: 'biswasbijoy',
+    ),
+  ];
 
-class _DeveloperScreenUIState extends State<DeveloperScreenUI> {
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
+    final scheme = Theme.of(context).colorScheme;
+    final width = MediaQuery.of(context).size.width;
+
     return Scaffold(
-      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
-        title: const Text(
-          "Developer Information",
-        ),
+        title: const Text('Developer Information'),
         centerTitle: true,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.darkBg,
-                AppColors.darkSurface,
-                AppColors.darkRaised,
-              ],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
-            ),
-          ),
-        ),
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: screenWidth * 0.15,
-                  backgroundImage: AssetImage("assets/images/bijoy.jpg"),
+            child: CircleAvatar(
+              radius: width * 0.15,
+              backgroundImage: const AssetImage('assets/images/bijoy.jpg'),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Bijoy Biswas',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Flutter Developer • Data Science Intern\n'
+            'Google Certified Data Analyst\n'
+            'Machine Learning Enthusiast\n'
+            'Competitive Programmer',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const Divider(height: 32),
+          Text(
+            'Hey there, I am Bijoy Biswas, an iOS developer and Data Science '
+            'intern. I love building applications, puzzles are my favourite, '
+            'and I am also a competitive programmer and Machine Learning '
+            'enthusiast.',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const Divider(height: 32),
+          Text(
+            'Contact',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ..._contactItems.map(
+            (item) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundImage: AssetImage(item.iconAsset),
+                radius: 24,
+              ),
+              title: Text(
+                item.label,
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
-                const Divider(
-                  height: 20,
-                  color: Color(0x33ffffff),
-                  thickness: 2,
-                ),
-                Text(
-                  "Bijoy Biswas",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const Divider(
-                  height: 20,
-                  color: Color(0x33ffffff),
-                  thickness: 2,
-                ),
-                Text(
-                  "Flutter Developer || Data Science Intern\nGoogle Certified Data Analyst\nMachine Learning Enthusiast\nCompetitive Programmer",
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w100),
-                  textAlign: TextAlign.center,
-                ),
-                const Divider(
-                  height: 20,
-                  color: Color(0x33ffffff),
-                  thickness: 2,
-                ),
-                Text(
-                  "Hey there, I am Bijoy Biswas, iOS developer and Data Science intern. I love developing amazing applications, puzzles are my favourite! I am also a competitive programmer and a Machine Learning enthusiast. I am also a Google Certified Data Analyst.",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500),
-                  // textAlign: TextAlign.center,
-                ),
-                Divider(
-                  height: screenHeight * 0.02,
-                  color: Color(0x33ffffff),
-                  thickness: 2,
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  "Contact",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
-                ),
-                Divider(
-                  thickness: 2,
-                  color: Color(0x33ffffff),
-                  indent: 30,
-                  endIndent: 30,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage("assets/images/call.jpg"),
-                    radius: 30,
+              ),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${item.label} is shown for contact only.'),
                   ),
-                  title: Text(
-                    "+8801719868313",
-                    style: TextStyle(
-                        color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage("assets/images/facebook.jpg"),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    "@biswasbijoy414",
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage("assets/images/linkedin.jpg"),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    "@biswasbijoy",
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage('assets/images/gmail.jpg'),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    'biswasbijoy414@gmail.com',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage('assets/images/telegram.jpg'),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    '@bijoy414',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage('assets/images/twitter.jpg'),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    '@biswasbijoy_414',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 2,
-                ),
-                ListTile(
-                  onTap: () {},
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage('assets/images/github.jpg'),
-                    radius: 30,
-                  ),
-                  title: Text(
-                    'biswasbijoy',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-              ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: Text(
+              'AirMail',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ContactItem {
+  const _ContactItem({required this.iconAsset, required this.label});
+
+  final String iconAsset;
+  final String label;
 }

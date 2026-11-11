@@ -1,16 +1,35 @@
-# airmail
+# AirMail
 
-A new Flutter project.
+A Flutter messaging app with JWT authentication and real-time chat over
+Socket.IO, backed by Express and MongoDB.
 
-## Getting Started
+## Features
+- Register / sign in with persisted sessions
+- Contact list and conversation inbox
+- Send messages over REST and receive them in real time
+- Light/dark Midnight Cyan theme
+- Offline-friendly error states and retry
+- Local mini-games and a developer contact screen
 
-This project is a starting point for a Flutter application.
+## Quick start
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+# Backend
+cd backend
+npm install
+# Configure MONGODB_URI and JWT_SECRET (see backend/.env.example)
+npm start
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+# App
+flutter pub get
+flutter run -d chrome
+```
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+To use a local backend:
+
+```bash
+flutter run --dart-define=AIRMAIL_API_URL=http://10.0.2.2:5000
+```
+
+See [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md) for architecture, endpoints, and
+environment variables.

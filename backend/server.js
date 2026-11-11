@@ -1,165 +1,432 @@
 const express = require('express');
+const http = require('http');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const { Server } = require('socket.io');
+
+const PORT = Number(process.env.PORT) || 5000;
+const MONGODB_URI = process.env.MONGODB_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const TOKEN_TTL = process.env.JWT_EXPIRES_IN || '7d';
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is required');
+  process.exit(1);
+}
+
+if (!JWT_SECRET) {
+  console.error('JWT_SECRET environment variable is required');
+  process.exit(1);
+}
 
 const app = express();
-const PORT = 5000;
-
-app.use(cors());
-app.use(express.json());
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-// Define schemas
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(cors({ origin: CORS_ORIGIN }));
+app.use(express.json({ limit: '64kb' }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
 });
 
-const messageSchema = new mongoose.Schema({
-  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  message: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
+mongoose
+  .connect(MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB connected');
+    startServer();
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
+  });
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB error:', err.message);
 });
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 80 },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 254,
+    },
+    password: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false }
+);
+
+const messageSchema = new mongoose.Schema(
+  {
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    message: { type: String, required: true, trim: true, maxlength: 5000 },
+    createdAt: { type: Date, default: Date.now, index: true },
+  },
+  { versionKey: false }
+);
+
+messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
 
 const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
 
-// @route   POST /api/auth/register
-// @desc    Register user
-// @access  Public
-app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password } = req.body;
-  
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PUBLIC_USER_FIELDS = 'name email createdAt';
+
+function publicUser(user) {
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+  };
+}
+
+function serializeMessage(doc) {
+  return {
+    _id: doc._id.toString(),
+    sender: doc.sender.toString(),
+    receiver: doc.receiver.toString(),
+    message: doc.message,
+    createdAt: doc.createdAt.toISOString(),
+  };
+}
+
+function signToken(user) {
+  return jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+}
+
+function auth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
   try {
-    // Check if user exists
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (!payload || !mongoose.isValidObjectId(payload.id)) {
+      return res.status(401).json({ message: 'Invalid session' });
+    }
+    req.userId = payload.id;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ message: 'Session expired. Please sign in again.' });
+  }
+}
+
+function rateLimit({ windowMs, max }) {
+  const hits = new Map();
+
+  const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of hits) {
+      if (entry.reset <= now) hits.delete(key);
+    }
+  }, windowMs);
+  if (typeof cleanup.unref === 'function') cleanup.unref();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || 'unknown';
+    const entry = hits.get(key);
+
+    if (!entry || entry.reset <= now) {
+      hits.set(key, { count: 1, reset: now + windowMs });
+      return next();
+    }
+
+    entry.count += 1;
+    if (entry.count > max) {
+      return res.status(429).json({ message: 'Too many requests. Please try again later.' });
+    }
+    return next();
+  };
+}
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 180 });
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+
+  if (name.length < 1 || name.length > 80) {
+    return res.status(400).json({ message: 'Name must be between 1 and 80 characters' });
+  }
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ message: 'Please provide a valid email address' });
+  }
+  if (password.length < 6 || password.length > 128) {
+    return res.status(400).json({ message: 'Password must be between 6 and 128 characters' });
+  }
+
+  try {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(409).json({ message: 'An account with this email already exists' });
     }
-    
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-    
-    // Generate token
-    const token = jwt.sign({ id: user._id }, 'airmail_secret_key', { expiresIn: '1h' });
-    
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await User.create({ name, email, password: hashedPassword });
+
+    return res.status(201).json({
+      token: signToken(user),
+      user: publicUser(user),
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'An account with this email already exists' });
+    }
+    console.error('Register error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// @route   POST /api/auth/login
-// @desc    Login user
-// @access  Public
-app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+
+  if (!EMAIL_RE.test(email) || password.length === 0) {
+    return res.status(400).json({ message: 'Invalid credentials' });
+  }
+
   try {
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    
-    // Validate password
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    
-    // Generate token
-    const token = jwt.sign({ id: user._id }, 'airmail_secret_key', { expiresIn: '1h' });
-    
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+
+    return res.json({
+      token: signToken(user),
+      user: publicUser(user),
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// @route   GET /api/users
-// @desc    Get all users
-// @access  Private
-app.get('/api/users', async (req, res) => {
+app.get('/api/auth/me', auth, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const user = await User.findById(req.userId).select(PUBLIC_USER_FIELDS);
+    if (!user) {
+      return res.status(401).json({ message: 'Account no longer exists' });
+    }
+    return res.json({ user: publicUser(user) });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Me error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// @route   POST /api/messages
-// @desc    Send message
-// @access  Private
-app.post('/api/messages', async (req, res) => {
-  const { senderId, receiverId, message } = req.body;
-  
+app.get('/api/users', apiLimiter, auth, async (req, res) => {
   try {
-    const newMessage = new Message({
-      sender: senderId,
+    const users = await User.find({ _id: { $ne: req.userId } })
+      .select(PUBLIC_USER_FIELDS)
+      .sort({ name: 1 });
+    return res.json(users.map(publicUser));
+  } catch (err) {
+    console.error('Users error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/chats', apiLimiter, auth, async (req, res) => {
+  try {
+    const messages = await Message.find({
+      $or: [{ sender: req.userId }, { receiver: req.userId }],
+    })
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .populate('sender', PUBLIC_USER_FIELDS)
+      .populate('receiver', PUBLIC_USER_FIELDS);
+
+    const chats = new Map();
+
+    for (const message of messages) {
+      if (!message.sender || !message.receiver) continue;
+
+      const senderId = message.sender._id.toString();
+      const receiverId = message.receiver._id.toString();
+      const other = senderId === req.userId.toString() ? message.receiver : message.sender;
+      const otherId = other._id.toString();
+
+      if (chats.has(otherId)) continue;
+
+      chats.set(otherId, {
+        user: publicUser(other),
+        lastMessage: message.message,
+        lastMessageAt: message.createdAt.toISOString(),
+      });
+    }
+
+    return res.json([...chats.values()]);
+  } catch (err) {
+    console.error('Chats error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/messages', apiLimiter, auth, async (req, res) => {
+  const { receiverId } = req.body;
+  const text = typeof req.body.message === 'string' ? req.body.message.trim() : '';
+
+  if (!mongoose.isValidObjectId(receiverId)) {
+    return res.status(400).json({ message: 'Invalid recipient' });
+  }
+  if (receiverId === req.userId.toString()) {
+    return res.status(400).json({ message: 'You cannot message yourself' });
+  }
+  if (text.length < 1 || text.length > 5000) {
+    return res.status(400).json({ message: 'Message must be between 1 and 5000 characters' });
+  }
+
+  try {
+    const receiver = await User.exists({ _id: receiverId });
+    if (!receiver) {
+      return res.status(404).json({ message: 'Recipient not found' });
+    }
+
+    const newMessage = await Message.create({
+      sender: req.userId,
       receiver: receiverId,
-      message,
+      message: text,
     });
-    
-    await newMessage.save();
-    res.json(newMessage);
+
+    const payload = serializeMessage(newMessage);
+    broadcastMessage(payload);
+    return res.status(201).json(payload);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Send message error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// @route   GET /api/messages/:userId
-// @desc    Get messages with a user
-// @access  Private
-app.get('/api/messages/:userId', async (req, res) => {
+app.get('/api/messages/:userId', apiLimiter, auth, async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: 'Invalid contact' });
+  }
+
   try {
     const messages = await Message.find({
       $or: [
-        { sender: req.params.userId, receiver: req.userId },
-        { sender: req.userId, receiver: req.params.userId },
+        { sender: req.userId, receiver: userId },
+        { sender: userId, receiver: req.userId },
       ],
     }).sort({ createdAt: 1 });
-    res.json(messages);
+
+    return res.json(messages.map(serializeMessage));
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Messages error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.use((req, res) => {
+  res.status(404).json({ message: 'Not found' });
 });
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'Request payload is too large' });
+  }
+  if (err instanceof SyntaxError) {
+    return res.status(400).json({ message: 'Invalid JSON payload' });
+  }
+
+  console.error('Unhandled error:', err.message);
+  return res.status(500).json({ message: 'Server error' });
+});
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: CORS_ORIGIN },
+});
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth && socket.handshake.auth.token;
+
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (!payload || !mongoose.isValidObjectId(payload.id)) {
+      return next(new Error('Invalid session'));
+    }
+    socket.userId = payload.id;
+    return next();
+  } catch (err) {
+    return next(new Error('Invalid session'));
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.join(`user:${socket.userId}`);
+
+  socket.on('send_message', async (payload, ack) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const receiverId = body.receiverId;
+    const text = typeof body.message === 'string' ? body.message.trim() : '';
+
+    try {
+      if (!mongoose.isValidObjectId(receiverId) || receiverId === socket.userId.toString()) {
+        throw new Error('Invalid recipient');
+      }
+      if (text.length < 1 || text.length > 5000) {
+        throw new Error('Message must be between 1 and 5000 characters');
+      }
+
+      const receiver = await User.exists({ _id: receiverId });
+      if (!receiver) throw new Error('Recipient not found');
+
+      const newMessage = await Message.create({
+        sender: socket.userId,
+        receiver: receiverId,
+        message: text,
+      });
+
+      const data = serializeMessage(newMessage);
+      broadcastMessage(data);
+
+      if (typeof ack === 'function') ack({ ok: true, message: data });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ ok: false, error: err.message });
+    }
+  });
+});
+
+function broadcastMessage(payload) {
+  io.to(`user:${payload.receiver}`).to(`user:${payload.sender}`).emit('new_message', payload);
+}
+
+function startServer() {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}

@@ -1,23 +1,17 @@
-import 'dart:ui' as ui;
-import 'package:airmail/Screens/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import 'Screens/home_screen.dart';
+import 'Screens/login_screen.dart';
+import 'services/session.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final isDark = ui.window.platformBrightness == Brightness.dark;
-  SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-    ),
-  );
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +21,44 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      home: LoginScreen(),
+      home: const SessionGate(),
+    );
+  }
+}
+
+class SessionGate extends StatefulWidget {
+  const SessionGate({super.key});
+
+  @override
+  State<SessionGate> createState() => _SessionGateState();
+}
+
+class _SessionGateState extends State<SessionGate> {
+  late final Future<Session?> _sessionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionFuture = SessionStore.load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Session?>(
+      future: _sessionFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final session = snapshot.data;
+        if (session == null) {
+          return const LoginScreen();
+        }
+        return HomeScreen(session: session);
+      },
     );
   }
 }
