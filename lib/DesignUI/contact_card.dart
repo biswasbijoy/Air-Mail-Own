@@ -9,10 +9,12 @@ class ContactCard extends StatelessWidget {
     super.key,
     required this.contact,
     this.onTap,
+    this.onRemove,
   });
 
   final ChatModel contact;
   final VoidCallback? onTap;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +54,36 @@ class ContactCard extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
           ),
-          trailing: Text(
-            isOnline ? 'Online' : 'Offline',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isOnline ? onlineColor : scheme.onSurfaceVariant,
-            ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isOnline ? 'Online' : 'Offline',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isOnline ? onlineColor : scheme.onSurfaceVariant,
+                ),
+              ),
+              if (onRemove != null)
+                PopupMenuButton<String>(
+                  tooltip: 'Contact options',
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'remove') onRemove!();
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem<String>(
+                      value: 'remove',
+                      child: Text('Remove contact'),
+                    ),
+                  ],
+                ),
+            ],
           ),
         );
       },

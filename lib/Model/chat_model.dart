@@ -7,6 +7,7 @@ class ChatModel {
   String? id;
   String? email;
   DateTime? lastMessageAt;
+  int unreadCount;
 
   ChatModel({
     this.name,
@@ -17,6 +18,7 @@ class ChatModel {
     this.id,
     this.email,
     this.lastMessageAt,
+    this.unreadCount = 0,
   });
 
   factory ChatModel.fromUserJson(Map<String, dynamic> json) {
@@ -34,6 +36,10 @@ class ChatModel {
         : const <String, dynamic>{};
     final lastMessageAt =
         DateTime.tryParse(json['lastMessageAt']?.toString() ?? '');
+    final rawUnread = json['unreadCount'];
+    final unreadCount = rawUnread is num
+        ? rawUnread.toInt()
+        : int.tryParse(rawUnread?.toString() ?? '') ?? 0;
 
     return ChatModel(
       id: (user['id'] ?? user['_id'])?.toString(),
@@ -42,6 +48,7 @@ class ChatModel {
       currentMessage: json['lastMessage']?.toString(),
       lastMessageAt: lastMessageAt,
       status: user['online'] == true ? 'online' : 'offline',
+      unreadCount: unreadCount < 0 ? 0 : unreadCount,
     );
   }
 }

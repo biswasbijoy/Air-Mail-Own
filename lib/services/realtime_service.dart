@@ -15,8 +15,11 @@ class RealtimeService {
 
   final ValueNotifier<Set<String>> onlineUsers =
       ValueNotifier<Set<String>>(<String>{});
+  final ValueNotifier<Set<String>> typingUsers =
+      ValueNotifier<Set<String>>(<String>{});
   final StreamController<MessageModel> _messages =
       StreamController<MessageModel>.broadcast();
+  final Map<String, Timer> _typingTimers = <String, Timer>{};
 
   io.Socket? _socket;
   String? _token;
@@ -33,6 +36,30 @@ class RealtimeService {
   bool effectiveOnline(String? userId, {bool fallback = false}) {
     if (_hasPresence) return isOnline(userId);
     return fallback;
+  }
+
+  bool isTyping(String? userId) {
+    return userId != null && typingUsers.value.contains(userId);
+  }
+
+  void sendTyping(String receiverId, bool typing) {
+    final socket = _socket;
+    if (socket == null || !socket.connected) return;
+    socket.emit('typing', {'receiverId': receiverId, 'typing': typing});
+  }
+
+  void _clearTyping() {
+    for (final timer in _typingTimers.values) {
+      timer.cancel();
+    }
+    _typingTimers.clear();
+    typingUsers.value = <String>{};
+  }
+
+  void _stopTypingFor(String userId) {
+    _typingTimers.remove(userId)?.cancel();
+    if (!typingUsers.value.contains(userId)) return;
+    typingUsers.value = Set<String>.from(typingUsers.value)..remove(userId);
   }
 
   void updateOnlineStatuses(Iterable<ChatModel> users) {
@@ -95,22 +122,47 @@ class RealtimeService {
         next.add(userId);
       } else {
         next.remove(userId);
+        _stopTypingFor(userId);
       }
 
       _hasPresence = true;
       onlineUsers.value = next;
     });
 
+    socket.on('typing', (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      if (userId == null || userId.isEmpty) return;
+
+      final typing = data['typing'] == true;
+      _typingTimers.remove(userId)?.cancel();
+
+      final next = Set<String>.from(typingUsers.value);
+      if (typing) {
+        next.add(userId);
+        _typingTimers[userId] = Timer(const Duration(seconds: 4), () {
+          _typingTimers.remove(userId);
+          if (!typingUsers.value.contains(userId)) return;
+          typingUsers.value = Set<String>.from(typingUsers.value)
+            ..remove(userId);
+        });
+      } else {
+        next.remove(userId);
+      }
+      typingUsers.value = next;
+    });
+
     socket.on('new_message', (data) {
       if (data is! Map) return;
-      _messages.add(
-        MessageModel.fromJson(Map<String, dynamic>.from(data)),
-      );
+      final message = MessageModel.fromJson(Map<String, dynamic>.from(data));
+      _stopTypingFor(message.senderId);
+      _messages.add(message);
     });
 
     socket.onDisconnect((_) {
       _hasPresence = true;
       onlineUsers.value = <String>{};
+      _clearTyping();
     });
 
     socket.onConnectError((_) {});
@@ -126,5 +178,6 @@ class RealtimeService {
     _token = null;
     _hasPresence = false;
     onlineUsers.value = <String>{};
+    _clearTyping();
   }
 }

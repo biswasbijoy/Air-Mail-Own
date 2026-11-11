@@ -138,6 +138,15 @@ class ApiService {
     return ChatModel.fromUserJson(Map<String, dynamic>.from(data));
   }
 
+  Future<bool> removeContact(String userId) async {
+    final data = await _delete('/api/contacts/$userId');
+    return data is Map && data['removed'] == true;
+  }
+
+  Future<void> markConversationRead(String userId) async {
+    await _post('/api/messages/$userId/read', const {});
+  }
+
   Future<List<MessageModel>> fetchMessages(String userId) async {
     final data = await _get('/api/messages/$userId');
     if (data is! List) return [];
@@ -180,6 +189,12 @@ class ApiService {
         headers: _headers,
         body: jsonEncode(body),
       ),
+    );
+  }
+
+  Future<dynamic> _delete(String path) {
+    return _send(
+      () => http.delete(Uri.parse('$baseUrl$path'), headers: _headers),
     );
   }
 

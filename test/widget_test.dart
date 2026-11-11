@@ -68,6 +68,16 @@ void main() {
     expect(chat.currentMessage, 'Hello');
     expect(chat.lastMessageAt, isNotNull);
     expect(chat.status, 'offline');
+    expect(chat.unreadCount, 0);
+
+    final unreadChat = ChatModel.fromChatJson({
+      'user': {'id': 'user-3', 'name': 'Unread', 'email': 'unread@example.com'},
+      'lastMessage': 'Ping',
+      'lastMessageAt': '2026-01-01T10:00:00.000Z',
+      'unreadCount': 4,
+    });
+
+    expect(unreadChat.unreadCount, 4);
 
     final message = MessageModel.fromJson({
       '_id': 'message-1',
@@ -109,5 +119,10 @@ void main() {
       ChatModel(id: 'user-3', status: 'offline'),
     ]);
     expect(realtime.isOnline('user-3'), isFalse);
+
+    realtime.typingUsers.value = {'user-5'};
+    expect(realtime.isTyping('user-5'), isTrue);
+    realtime.disconnect();
+    expect(realtime.isTyping('user-5'), isFalse);
   });
 }

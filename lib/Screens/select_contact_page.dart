@@ -86,6 +86,52 @@ class _SelectContactState extends State<SelectContact> {
     );
   }
 
+  Future<void> _removeContact(ChatModel contact) async {
+    final contactId = contact.id;
+    if (contactId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove contact'),
+        content: Text(
+          'Remove ${contact.name ?? 'this contact'} from your contacts?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ApiService(token: widget.session.token).removeContact(contactId);
+      if (!mounted) return;
+      setState(() => _contacts.removeWhere((item) => item.id == contactId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contact removed.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not remove the contact.')),
+      );
+    }
+  }
+
   Future<void> _openAddContact() async {
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -158,6 +204,7 @@ class _SelectContactState extends State<SelectContact> {
                               return ContactCard(
                                 contact: contact,
                                 onTap: () => _openChat(contact),
+                                onRemove: () => _removeContact(contact),
                               );
                             },
                           ),

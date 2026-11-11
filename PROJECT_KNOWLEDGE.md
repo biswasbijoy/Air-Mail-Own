@@ -3,9 +3,10 @@
 ## Project Overview
 AirMail is a Flutter messaging app backed by Node.js/Express/MongoDB. It
 supports JWT authentication, persisted sessions, per-user contacts added by
-email, online/offline presence, conversation history, HTTP message sending, and
-real-time delivery through Socket.IO. The UI uses the Midnight Cyan theme with
-automatic light/dark mode.
+email (with removal), online/offline presence, typing indicators, unread
+badges, conversation history, HTTP message sending, and real-time delivery
+through Socket.IO. The UI uses the Midnight Cyan theme with automatic light/dark
+mode.
 
 ## Tech Stack
 
@@ -48,8 +49,8 @@ air_mail/
 │   │   ├── chat_model.dart        # Contact/conversation model + JSON parsing
 │   │   └── message_model.dart     # Message model + JSON parsing
 │   ├── services/
-│   │   ├── api_service.dart       # REST client, contacts, auth headers, errors
-│   │   ├── realtime_service.dart  # Socket.IO presence + message events
+│   │   ├── api_service.dart       # REST client, contacts, read state, errors
+│   │   ├── realtime_service.dart  # Socket.IO presence, typing, messages
 │   │   └── session.dart           # SharedPreferences session store
 │   ├── utils/time_format.dart     # Human-readable timestamps
 │   ├── theme/                     # AppColors + light/dark ThemeData
@@ -96,10 +97,16 @@ air_mail/
 | GET | `/api/contacts` | Yes | Current user's contact list |
 | GET | `/api/contacts/search?email=` | Yes | Look up a user by exact email |
 | POST | `/api/contacts` | Yes | Add a user to contacts by email |
+| DELETE | `/api/contacts/:userId` | Yes | Remove a contact |
 | GET | `/api/users` | Yes | Deprecated alias for `/api/contacts` |
-| GET | `/api/chats` | Yes | Conversations with last message |
+| GET | `/api/chats` | Yes | Conversations with last message and unread count |
 | POST | `/api/messages` | Yes | Send message (sender comes from JWT) |
 | GET | `/api/messages/:userId` | Yes | Conversation history |
+| POST | `/api/messages/:userId/read` | Yes | Mark that conversation's messages as read |
+
+Sending a message also adds the recipient to the sender's contact list. This
+means replying to a message from someone outside your contacts adds them
+automatically.
 
 All protected routes use JWT middleware. Message senders are derived from the
 verified token rather than trusting a client-supplied sender ID.
@@ -115,7 +122,14 @@ verified token rather than trusting a client-supplied sender ID.
   de-duplicates by message ID. Sending itself uses the REST endpoint so failures
   surface directly in the UI.
 - `ChatPage` refreshes its conversation list when a new message arrives, so a
-  first message appears immediately without waiting for a reply.
+  first message appears immediately without waiting for a reply. It shows the
+  server-provided `unreadCount` badge for each conversation.
+- New messages are created with `readAt: null`; opening a chat or receiving a
+  message while it is open calls `POST /api/messages/:userId/read`. Older
+  messages without a `readAt` field are treated as already read.
+- While composing, `IndivisualPage` emits socket `typing` events (debounced with
+  a two-second idle timeout and cleared on send/leave). The server relays them
+  only to the recipient, who shows "Typing..." in the chat header.
 - The server tracks connected sockets per user. On connect it emits
   `presence_state` with related online users; users' contacts and chat partners
   receive `presence` updates when someone goes online or offline.
@@ -131,11 +145,14 @@ verified token rather than trusting a client-supplied sender ID.
 ### Contact
 - `owner` (ObjectId ref User), `contact` (ObjectId ref User), `createdAt`
 - Unique per owner/contact pair; contacts are one-way and per-user.
+- Created by the add-contact API or automatically for the recipient of an
+  outgoing message.
 
 ### Message
 - `sender` (ObjectId ref User), `receiver` (ObjectId ref User)
-- `message` (1–5000 characters), `createdAt`
-- Indexed for conversation lookups; queried oldest-first.
+- `message` (1–5000 characters), `createdAt`, `readAt` (null until read)
+- Indexed for conversation lookups and unread counts; queried oldest-first.
+- Legacy messages without `readAt` are treated as read.
 
 ## UI Overview
 
@@ -143,10 +160,10 @@ verified token rather than trusting a client-supplied sender ID.
 |--------|---------|
 | `login_screen.dart` | Sign in / register with validation and error handling |
 | `home_screen.dart` | Inbox, Contacts, Calls, Games tabs; drawer; logout |
-| `chat_page.dart` | Live conversation list with pull-to-refresh |
-| `select_contact_page.dart` | User-added contacts only; add button; tap to chat |
+| `chat_page.dart` | Live conversation list with unread badges and pull-to-refresh |
+| `select_contact_page.dart` | User-added contacts; add and remove; tap to chat |
 | `add_contact_page.dart` | Look up a user by email and add them |
-| `indivisual_page.dart` | Message history, send, real-time receive, presence |
+| `indivisual_page.dart` | Messages, send, real-time receive, presence, typing |
 | `calls_screen.dart` | Demo call history (calls not implemented) |
 | `game_screen.dart` | Games hub |
 | `Games/*` | Working local Rock Paper Scissors, Tic Tac Toe, Color Guess |
@@ -197,8 +214,9 @@ node --check backend/server.js
 ## Known Limitations
 - Calls are a demo list; no voice/video backend.
 - Games are local two-player/computer games; no online multiplayer.
-- No push notifications, unread badges, or typing indicators.
-- Presence is in-memory; a server restart clears it until clients reconnect.
+- No push notifications; unread badges are per-conversation in the app.
+- Presence and typing state are in-memory; a server restart or disconnect clears
+  them until clients reconnect.
 - No offline message queue; send failures are shown and can be retried.
 - Session expiration requires signing in again (no refresh token).
 - Contacts are one-way and must be added by each user.
@@ -206,9 +224,8 @@ node --check backend/server.js
 
 ## Future Enhancements
 - [ ] Message deletion, editing, and search
-- [ ] Push notifications and unread counts
-- [ ] Typing indicators
-- [ ] Contact removal and contact requests
+- [ ] Push notifications
+- [ ] Contact requests and blocking
 - [ ] Profile editing and avatar uploads
 - [ ] Voice/video calls
 - [ ] Refresh tokens / silent re-authentication

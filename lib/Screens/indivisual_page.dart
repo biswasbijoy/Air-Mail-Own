@@ -30,9 +30,11 @@ class _IndivisualPageState extends State<IndivisualPage> {
   final TextEditingController _controller = TextEditingController();
   final List<MessageModel> _messages = [];
   StreamSubscription<MessageModel>? _messageSubscription;
+  Timer? _typingTimer;
 
   bool _loading = true;
   bool _sending = false;
+  bool _typingSent = false;
   String? _error;
 
   String? get _otherUserId => widget.chatModel.id;
@@ -40,6 +42,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_handleTextChanged);
     _messageSubscription =
         RealtimeService.instance.messages.listen(_handleIncomingMessage);
     _loadMessages();
@@ -47,9 +50,51 @@ class _IndivisualPageState extends State<IndivisualPage> {
 
   @override
   void dispose() {
+    _stopTyping();
     _messageSubscription?.cancel();
+    _controller.removeListener(_handleTextChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _handleTextChanged() {
+    final otherId = _otherUserId;
+    if (otherId == null) return;
+
+    if (_controller.text.trim().isEmpty) {
+      _stopTyping();
+      return;
+    }
+
+    if (!_typingSent) {
+      _typingSent = true;
+      RealtimeService.instance.sendTyping(otherId, true);
+    }
+
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 2), _stopTyping);
+  }
+
+  void _stopTyping() {
+    _typingTimer?.cancel();
+    _typingTimer = null;
+    if (!_typingSent) return;
+
+    _typingSent = false;
+    final otherId = _otherUserId;
+    if (otherId != null) {
+      RealtimeService.instance.sendTyping(otherId, false);
+    }
+  }
+
+  Future<void> _markConversationRead() async {
+    final otherId = _otherUserId;
+    if (otherId == null) return;
+
+    try {
+      await ApiService(token: widget.session.token)
+          .markConversationRead(otherId);
+    } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
@@ -73,6 +118,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
         _loading = false;
         _error = null;
       });
+      unawaited(_markConversationRead());
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -95,6 +141,10 @@ class _IndivisualPageState extends State<IndivisualPage> {
     if (_messages.any((item) => item.id == message.id)) return;
 
     setState(() => _messages.add(message));
+
+    if (message.senderId == otherId) {
+      unawaited(_markConversationRead());
+    }
   }
 
   Future<void> _send() async {
@@ -102,6 +152,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
     final text = _controller.text.trim();
     if (_sending || text.isEmpty || otherId == null) return;
 
+    _stopTyping();
     setState(() => _sending = true);
 
     try {
@@ -181,35 +232,54 @@ class _IndivisualPageState extends State<IndivisualPage> {
               fallback: widget.chatModel.status == 'online',
             );
 
-            return Row(
-              children: [
-                AppAvatar(
-                  name: widget.chatModel.name,
-                  size: 38,
-                  online: online,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.chatModel.name ?? 'Chat',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+            return ValueListenableBuilder<Set<String>>(
+              valueListenable: RealtimeService.instance.typingUsers,
+              builder: (context, typing, ___) {
+                final isTyping = typing.contains(_otherUserId);
+
+                return Row(
+                  children: [
+                    AppAvatar(
+                      name: widget.chatModel.name,
+                      size: 38,
+                      online: online,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.chatModel.name ?? 'Chat',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            isTyping
+                                ? 'Typing...'
+                                : online
+                                    ? 'Online'
+                                    : 'Offline',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: isTyping ? AppColors.primary : null,
+                                  fontStyle: isTyping
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        online ? 'Online' : 'Offline',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),

@@ -70,11 +70,13 @@ const messageSchema = new mongoose.Schema(
     receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     message: { type: String, required: true, trim: true, maxlength: 5000 },
     createdAt: { type: Date, default: Date.now, index: true },
+    readAt: { type: Date },
   },
   { versionKey: false }
 );
 
 messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
+messageSchema.index({ receiver: 1, readAt: 1 });
 
 const contactSchema = new mongoose.Schema(
   {
@@ -104,6 +106,26 @@ function publicUser(user) {
     email: user.email,
     online: onlineSockets.has(user._id.toString()),
   };
+}
+
+async function ensureContact(ownerId, contactId) {
+  if (ownerId.toString() === contactId.toString()) return;
+
+  try {
+    await Contact.updateOne(
+      { owner: ownerId, contact: contactId },
+      {
+        $setOnInsert: {
+          owner: ownerId,
+          contact: contactId,
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+  } catch (err) {
+    if (!err || err.code !== 11000) throw err;
+  }
 }
 
 async function getRelatedUserIds(userId) {
@@ -382,16 +404,50 @@ app.post('/api/contacts', apiLimiter, auth, async (req, res) => {
   }
 });
 
+app.delete('/api/contacts/:userId', apiLimiter, auth, async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: 'Invalid contact' });
+  }
+
+  try {
+    const result = await Contact.deleteOne({
+      owner: req.userId,
+      contact: userId,
+    });
+
+    return res.json({ removed: result.deletedCount > 0 });
+  } catch (err) {
+    console.error('Remove contact error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.get('/api/chats', apiLimiter, auth, async (req, res) => {
   try {
-    const messages = await Message.find({
-      $or: [{ sender: req.userId }, { receiver: req.userId }],
-    })
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .populate('sender', PUBLIC_USER_FIELDS)
-      .populate('receiver', PUBLIC_USER_FIELDS);
+    const [messages, unread] = await Promise.all([
+      Message.find({
+        $or: [{ sender: req.userId }, { receiver: req.userId }],
+      })
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .populate('sender', PUBLIC_USER_FIELDS)
+        .populate('receiver', PUBLIC_USER_FIELDS),
+      Message.aggregate([
+        {
+          $match: {
+            receiver: new mongoose.Types.ObjectId(req.userId),
+            readAt: { $exists: true, $eq: null },
+          },
+        },
+        { $group: { _id: '$sender', count: { $sum: 1 } } },
+      ]),
+    ]);
 
+    const unreadBySender = new Map(
+      unread.map((entry) => [entry._id.toString(), entry.count])
+    );
     const chats = new Map();
 
     for (const message of messages) {
@@ -408,6 +464,7 @@ app.get('/api/chats', apiLimiter, auth, async (req, res) => {
         user: publicUser(other),
         lastMessage: message.message,
         lastMessageAt: message.createdAt.toISOString(),
+        unreadCount: unreadBySender.get(otherId) || 0,
       });
     }
 
@@ -442,13 +499,42 @@ app.post('/api/messages', apiLimiter, auth, async (req, res) => {
       sender: req.userId,
       receiver: receiverId,
       message: text,
+      readAt: null,
     });
+
+    await ensureContact(req.userId, receiverId).catch((err) =>
+      console.error('Auto contact error:', err.message)
+    );
 
     const payload = serializeMessage(newMessage);
     broadcastMessage(payload);
     return res.status(201).json(payload);
   } catch (err) {
     console.error('Send message error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/messages/:userId/read', apiLimiter, auth, async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: 'Invalid contact' });
+  }
+
+  try {
+    const result = await Message.updateMany(
+      {
+        sender: userId,
+        receiver: req.userId,
+        readAt: { $exists: true, $eq: null },
+      },
+      { $set: { readAt: new Date() } }
+    );
+
+    return res.json({ marked: result.modifiedCount });
+  } catch (err) {
+    console.error('Mark read error:', err.message);
     return res.status(500).json({ message: 'Server error' });
   }
 });
@@ -540,6 +626,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('typing', (payload) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const receiverId = body.receiverId;
+
+    if (!mongoose.isValidObjectId(receiverId)) return;
+    if (receiverId === userId) return;
+
+    io.to(`user:${receiverId}`).emit('typing', {
+      userId,
+      typing: body.typing === true,
+    });
+  });
+
   socket.on('send_message', async (payload, ack) => {
     const body = payload && typeof payload === 'object' ? payload : {};
     const receiverId = body.receiverId;
@@ -560,7 +659,12 @@ io.on('connection', (socket) => {
         sender: socket.userId,
         receiver: receiverId,
         message: text,
+        readAt: null,
       });
+
+      await ensureContact(socket.userId, receiverId).catch((err) =>
+        console.error('Auto contact error:', err.message)
+      );
 
       const data = serializeMessage(newMessage);
       broadcastMessage(data);

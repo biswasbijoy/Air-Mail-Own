@@ -20,6 +20,8 @@ class CustomCard extends StatelessWidget {
           chatModel.id,
           fallback: chatModel.status == 'online',
         );
+        final scheme = Theme.of(context).colorScheme;
+        final unreadCount = chatModel.unreadCount;
 
         return InkWell(
           onTap: onTap,
@@ -55,9 +57,38 @@ class CustomCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  chatModel.time ?? '',
-                  style: Theme.of(context).textTheme.bodySmall,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      chatModel.time ?? '',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: scheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: TextStyle(
+                            color: scheme.onPrimary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

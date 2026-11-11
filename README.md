@@ -5,9 +5,11 @@ Socket.IO, backed by Express and MongoDB.
 
 ## Features
 - Register / sign in with persisted sessions
-- Per-user contacts added by email lookup
-- Live online/offline presence in contacts and chats
+- Per-user contacts added by email lookup, with removal
+- Live online/offline presence and typing indicators in chats
 - Conversation inbox that updates in real time, including the first message
+- Unread message badges per conversation, cleared when a chat is opened
+- Replying to a message automatically adds the sender to your contacts
 - Send messages over REST and receive them in real time
 - Light/dark Midnight Cyan theme
 - Offline-friendly error states and retry
