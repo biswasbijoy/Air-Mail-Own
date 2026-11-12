@@ -4,9 +4,9 @@
 AirMail is a Flutter messaging app backed by Node.js/Express/MongoDB. It
 supports JWT authentication, persisted sessions, per-user contacts added by
 email (with removal), online/offline presence, typing indicators, unread
-badges, conversation history, HTTP message sending, and real-time delivery
-through Socket.IO. The UI uses the Midnight Cyan theme with automatic light/dark
-mode.
+badges, conversation history, HTTP message sending, real-time delivery through
+Socket.IO, and free 1:1 audio calls over WebRTC. The UI uses the Midnight Cyan
+theme with automatic light/dark mode.
 
 ## Tech Stack
 
@@ -14,7 +14,8 @@ mode.
 - Flutter 3.47.9 / Dart 3.13.7
 - Material 3 (`useMaterial3: true`)
 - HTTP (`package:http`) for REST calls
-- Socket.IO client (`socket_io_client`) for real-time messages
+- Socket.IO client (`socket_io_client`) for real-time messages and call signaling
+- `flutter_webrtc` for peer-to-peer audio media and microphone capture
 - `shared_preferences` for session persistence
 - `image_picker` for the camera demo screen
 - Theme: `ThemeMode.system`; colors in `lib/theme/app_colors.dart`
@@ -36,8 +37,20 @@ mode.
 | `PORT` | Listen port; defaults to 5000 and respects Render's value |
 | `CORS_ORIGIN` | Allowed origin, defaults to `*` |
 | `JWT_EXPIRES_IN` | Token lifetime, defaults to `7d` |
+| `CALL_RING_TIMEOUT_MS` | Ring timeout for unanswered calls, defaults to `45000` |
 
 The server exits at startup when `MONGODB_URI` or `JWT_SECRET` is missing.
+
+Optional Flutter build-time TURN configuration:
+
+| Define | Purpose |
+|--------|---------|
+| `AIRMAIL_TURN_URL` | Comma-separated TURN URL(s), e.g. `turn:host:3478` |
+| `AIRMAIL_TURN_USERNAME` | TURN username |
+| `AIRMAIL_TURN_CREDENTIAL` | TURN credential |
+
+STUN-only is used when these are omitted. Credentials compiled into an app can
+be extracted, so production should use short-lived TURN credentials.
 
 ## Project Structure
 
@@ -61,7 +74,7 @@ air_mail/
 │   │   ├── select_contact_page.dart # Contact-only list + add button
 │   │   ├── add_contact_page.dart  # Email lookup and add contact
 │   │   ├── indivisual_page.dart   # Chat screen (REST + realtime events)
-│   │   ├── calls_screen.dart      # Demo call list
+│   │   ├── calls_screen.dart      # Calls tab guidance
 │   │   ├── game_screen.dart       # Games hub
 │   │   └── Splash/                # Optional intro flow
 │   ├── Page/chat_page.dart        # Inbox with live conversation list
@@ -72,6 +85,10 @@ air_mail/
 │   └── .env.example
 └── test/widget_test.dart          # Login/session/model tests
 ```
+
+Call-related files: `lib/Model/call_event.dart` (signaling event parsing),
+`lib/services/call_service.dart` (WebRTC state and media), and
+`lib/Screens/call_page.dart` (full-screen call UI).
 
 ## Authentication Flow
 
@@ -136,6 +153,38 @@ verified token rather than trusting a client-supplied sender ID.
 - API user payloads include `online`, used as the initial status until a
   presence event arrives.
 
+## Audio Calls
+
+- Calls are 1:1 audio only. The existing Socket.IO connection carries call
+  signaling; audio media flows directly between the two devices over WebRTC.
+- `CallService` is a singleton `ChangeNotifier` with states `idle`, `outgoing`,
+  `incoming`, `connecting`, and `active`. `HomeScreen` attaches it, routes both
+  incoming and outgoing calls to `CallPage`, and detaches it on logout.
+- The caller acquires the microphone, then sends `call_invite` with an
+  acknowledgement that returns the server-generated `callId`. The recipient
+  receives `call_incoming` with the caller's public profile.
+- The server tracks active calls in memory (`activeCalls` and `userCalls`).
+  It rejects self-calls, offline users, busy users, and users with no contact or
+  message relationship. One call per user is allowed.
+- Signaling events: client `call_invite`, `call_accept`, `call_reject`,
+  `call_end`, `webrtc_signal`; server `call_incoming`, `call_accepted`,
+  `call_ended`, `webrtc_signal`. WebRTC offers, answers, and ICE candidates are
+  relayed only after the call is accepted.
+- Caller creates the WebRTC offer after `call_accepted`; the recipient creates
+  the answer. Pending ICE candidates are queued until the remote description is
+  set.
+- Calls time out after 45 seconds with reason `No answer`; declining uses
+  `Declined`, hanging up uses `Call ended`/`Call cancelled`, and the last socket
+  disconnect uses `Connection lost`.
+- STUN is configured by default. Optional TURN can be supplied with the build
+  defines listed above. TURN is needed for reliable connectivity on restrictive
+  NATs and some mobile networks.
+- The UI supports mute, speakerphone, incoming accept/decline, outgoing cancel,
+  end call, and a live duration timer. Remote audio is attached through an
+  `RTCVideoRenderer` on web.
+- There is no call history or push-backed background ringing yet. Both users
+  must have the app open for the call to ring.
+
 ## Database Schema
 
 ### User
@@ -163,8 +212,9 @@ verified token rather than trusting a client-supplied sender ID.
 | `chat_page.dart` | Live conversation list with unread badges and pull-to-refresh |
 | `select_contact_page.dart` | User-added contacts; add and remove; tap to chat |
 | `add_contact_page.dart` | Look up a user by email and add them |
-| `indivisual_page.dart` | Messages, send, real-time receive, presence, typing |
-| `calls_screen.dart` | Demo call history (calls not implemented) |
+| `indivisual_page.dart` | Messages, send, real-time receive, presence, typing, start audio call |
+| `call_page.dart` | Incoming/outgoing/active audio call controls |
+| `calls_screen.dart` | Guidance for starting calls from a chat |
 | `game_screen.dart` | Games hub |
 | `Games/*` | Working local Rock Paper Scissors, Tic Tac Toe, Color Guess |
 
@@ -175,6 +225,10 @@ Nested `Scaffold`s were removed so the tab shell owns the single AppBar/FAB.
 - Package: `com.example.airmail`
 - `INTERNET` permission is declared in the main manifest, so release builds can
   reach the API.
+- Audio calling adds `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`,
+  `ACCESS_NETWORK_STATE`, and `CHANGE_NETWORK_STATE`.
+- iOS declares `NSMicrophoneUsageDescription`; camera permission will be needed
+  when video calling is added.
 - `image_picker` needs no extra manifest permission for the system camera intent.
 - `android/gradle.properties` sets `kotlin.incremental=false`. This avoids a
   Windows-only "Could not close incremental caches" failure when the project
@@ -212,7 +266,12 @@ node --check backend/server.js
 ```
 
 ## Known Limitations
-- Calls are a demo list; no voice/video backend.
+- Calls are 1:1 audio only; video calling is not implemented yet.
+- Calls ring only while both apps are open. Background/lock-screen calling
+  requires push notifications and native call UI.
+- Call signaling is in-memory on a single backend instance; no call history is
+  stored.
+- STUN-only builds can fail on restrictive NATs until TURN is configured.
 - Games are local two-player/computer games; no online multiplayer.
 - No push notifications; unread badges are per-conversation in the app.
 - Presence and typing state are in-memory; a server restart or disconnect clears
@@ -227,5 +286,6 @@ node --check backend/server.js
 - [ ] Push notifications
 - [ ] Contact requests and blocking
 - [ ] Profile editing and avatar uploads
-- [ ] Voice/video calls
+- [ ] Video calls and call history
+- [ ] Background incoming calls with push notifications
 - [ ] Refresh tokens / silent re-authentication

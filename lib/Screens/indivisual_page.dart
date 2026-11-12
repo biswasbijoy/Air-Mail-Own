@@ -6,6 +6,7 @@ import 'package:airmail/DesignUI/message_bubble.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
@@ -34,6 +35,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
 
   bool _loading = true;
   bool _sending = false;
+  bool _startingCall = false;
   bool _typingSent = false;
   String? _error;
 
@@ -179,6 +181,24 @@ class _IndivisualPageState extends State<IndivisualPage> {
     }
   }
 
+  Future<void> _startCall() async {
+    if (_startingCall) return;
+    setState(() => _startingCall = true);
+
+    final started = await CallService.instance.startCall(widget.chatModel);
+
+    if (!mounted) return;
+    setState(() => _startingCall = false);
+
+    if (!started) {
+      final message =
+          CallService.instance.lastError ?? 'Could not start the call.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
   Widget _buildMessageList() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -285,13 +305,15 @@ class _IndivisualPageState extends State<IndivisualPage> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Call',
-            icon: const Icon(Icons.call_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Calling is not available yet.')),
-              );
-            },
+            tooltip: 'Start audio call',
+            icon: _startingCall
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.call_outlined),
+            onPressed: _startingCall ? null : _startCall,
           ),
         ],
       ),

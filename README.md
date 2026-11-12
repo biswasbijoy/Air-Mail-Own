@@ -10,6 +10,7 @@ Socket.IO, backed by Express and MongoDB.
 - Conversation inbox that updates in real time, including the first message
 - Unread message badges per conversation, cleared when a chat is opened
 - Replying to a message automatically adds the sender to your contacts
+- Free 1:1 audio calls over WebRTC with Socket.IO signaling
 - Send messages over REST and receive them in real time
 - Light/dark Midnight Cyan theme
 - Offline-friendly error states and retry
@@ -35,6 +36,21 @@ The app defaults to the deployed backend. If `/api/health` on that host returns
 routes. Deploy the current `backend/` code, and set `MONGODB_URI` and
 `JWT_SECRET` in the hosting dashboard before redeploying. Changing
 `JWT_SECRET` invalidates existing sessions, so sign in again after deploying.
+
+Audio calls require microphone permission and work while both users have the
+app open. Media is peer-to-peer over WebRTC and signaling uses the existing
+Socket.IO server. STUN is enabled by default; for restrictive networks, pass a
+TURN server at build time:
+
+```bash
+flutter run \
+  --dart-define=AIRMAIL_TURN_URL=turn:your-host:3478 \
+  --dart-define=AIRMAIL_TURN_USERNAME=user \
+  --dart-define=AIRMAIL_TURN_CREDENTIAL=password
+```
+
+TURN credentials embedded in an app build can be extracted. Use short-lived
+credentials for production.
 
 See [PROJECT_KNOWLEDGE.md](PROJECT_KNOWLEDGE.md) for architecture, endpoints, and
 environment variables.

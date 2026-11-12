@@ -1,9 +1,11 @@
 import 'package:airmail/DesignUI/drawer_components.dart';
 import 'package:airmail/Page/chat_page.dart';
+import 'package:airmail/Screens/call_page.dart';
 import 'package:airmail/Screens/calls_screen.dart';
 import 'package:airmail/Screens/game_screen.dart';
 import 'package:airmail/Screens/login_screen.dart';
 import 'package:airmail/Screens/select_contact_page.dart';
+import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:flutter/material.dart';
@@ -21,11 +23,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ChatPageState> _chatPageKey = GlobalKey<ChatPageState>();
   late final List<Widget> _pages;
   int _selectedIndex = 0;
+  bool _callPageOpen = false;
 
   @override
   void initState() {
     super.initState();
     RealtimeService.instance.connect(widget.session);
+    CallService.instance.attach();
+    CallService.instance.addListener(_handleCallStateChanged);
     _pages = [
       ChatPage(key: _chatPageKey, session: widget.session),
       SelectContact(session: widget.session),
@@ -36,8 +41,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    CallService.instance.removeListener(_handleCallStateChanged);
+    CallService.instance.detach();
     RealtimeService.instance.disconnect();
     super.dispose();
+  }
+
+  void _handleCallStateChanged() {
+    if (!mounted || _callPageOpen) return;
+
+    final state = CallService.instance.state;
+    if (state != CallState.outgoing && state != CallState.incoming) return;
+
+    _callPageOpen = true;
+    final route = MaterialPageRoute<void>(builder: (_) => const CallPage());
+    Navigator.of(context).push(route).whenComplete(() {
+      _callPageOpen = false;
+      final nextState = CallService.instance.state;
+      if (nextState == CallState.outgoing || nextState == CallState.incoming) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleCallStateChanged();
+        });
+      }
+    });
   }
 
   Future<void> _logout() async {

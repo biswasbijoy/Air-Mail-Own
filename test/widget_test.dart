@@ -1,3 +1,4 @@
+import 'package:airmail/Model/call_event.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/Screens/login_screen.dart';
@@ -124,5 +125,51 @@ void main() {
     expect(realtime.isTyping('user-5'), isTrue);
     realtime.disconnect();
     expect(realtime.isTyping('user-5'), isFalse);
+  });
+
+  test('parses incoming, accepted, ended, and WebRTC call events', () {
+    final incoming = CallEvent.fromSocketEvent('call_incoming', {
+      'callId': 'call-1',
+      'callType': 'audio',
+      'caller': {
+        'id': 'user-2',
+        'name': 'Caller',
+        'email': 'caller@example.com',
+      },
+    });
+
+    expect(incoming, isNotNull);
+    expect(incoming!.type, CallEventType.incoming);
+    expect(incoming.callId, 'call-1');
+    expect(incoming.peer?.id, 'user-2');
+    expect(incoming.peer?.name, 'Caller');
+
+    final accepted = CallEvent.fromSocketEvent('call_accepted', {
+      'callId': 'call-1',
+      'callType': 'audio',
+    });
+    expect(accepted?.type, CallEventType.accepted);
+
+    final ended = CallEvent.fromSocketEvent('call_ended', {
+      'callId': 'call-1',
+      'reason': 'Declined',
+    });
+    expect(ended?.type, CallEventType.ended);
+    expect(ended?.reason, 'Declined');
+
+    final signal = CallEvent.fromSocketEvent('webrtc_signal', {
+      'callId': 'call-1',
+      'from': 'user-2',
+      'data': {'type': 'offer', 'sdp': 'test-offer'},
+    });
+    expect(signal?.type, CallEventType.signal);
+    expect(signal?.from, 'user-2');
+    expect(signal?.data?['type'], 'offer');
+    expect(signal?.data?['sdp'], 'test-offer');
+
+    expect(
+      CallEvent.fromSocketEvent('call_incoming', {'callId': '', 'caller': {}}),
+      isNull,
+    );
   });
 }

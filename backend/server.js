@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const { randomUUID } = require('crypto');
 const { Server } = require('socket.io');
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -95,6 +96,10 @@ const Message = mongoose.model('Message', messageSchema);
 const Contact = mongoose.model('Contact', contactSchema);
 
 const onlineSockets = new Map();
+const activeCalls = new Map();
+const userCalls = new Map();
+const CALL_RING_TIMEOUT_MS =
+  Number(process.env.CALL_RING_TIMEOUT_MS) || 45000;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PUBLIC_USER_FIELDS = 'name email createdAt';
@@ -152,6 +157,56 @@ async function getRelatedUserIds(userId) {
   }
   related.delete(id);
   return related;
+}
+
+function callOtherUserId(call, userId) {
+  if (!call || !userId) return null;
+  if (call.callerId === userId) return call.receiverId;
+  if (call.receiverId === userId) return call.callerId;
+  return null;
+}
+
+function clearCall(callId) {
+  const call = activeCalls.get(callId);
+  if (!call) return null;
+
+  if (call.timeout) clearTimeout(call.timeout);
+  activeCalls.delete(callId);
+  if (userCalls.get(call.callerId) === callId) {
+    userCalls.delete(call.callerId);
+  }
+  if (userCalls.get(call.receiverId) === callId) {
+    userCalls.delete(call.receiverId);
+  }
+  return call;
+}
+
+function endActiveCall(callId, reason, exceptUserId = null) {
+  const call = clearCall(callId);
+  if (!call) return;
+
+  if (exceptUserId) {
+    const otherId = callOtherUserId(call, exceptUserId);
+    if (otherId) {
+      io.to(`user:${otherId}`).emit('call_ended', {
+        callId,
+        reason,
+      });
+    }
+    return;
+  }
+
+  io.to(`user:${call.callerId}`)
+    .to(`user:${call.receiverId}`)
+    .emit('call_ended', { callId, reason });
+}
+
+function armCallTimeout(call) {
+  call.timeout = setTimeout(() => {
+    const current = activeCalls.get(call.callId);
+    if (!current || current.acceptedAt) return;
+    endActiveCall(current.callId, 'No answer');
+  }, CALL_RING_TIMEOUT_MS);
 }
 
 async function broadcastPresence(userId, online) {
@@ -619,6 +674,12 @@ io.on('connection', (socket) => {
     if (sockets.size > 0) return;
 
     onlineSockets.delete(userId);
+
+    const callId = userCalls.get(userId);
+    if (callId) {
+      endActiveCall(callId, 'Connection lost', userId);
+    }
+
     try {
       await broadcastPresence(userId, false);
     } catch (err) {
@@ -636,6 +697,172 @@ io.on('connection', (socket) => {
     io.to(`user:${receiverId}`).emit('typing', {
       userId,
       typing: body.typing === true,
+    });
+  });
+
+  socket.on('call_invite', async (payload, ack) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const receiverId = body.receiverId;
+
+    const reply = (data) => {
+      if (typeof ack === 'function') ack(data);
+    };
+
+    try {
+      if (!mongoose.isValidObjectId(receiverId) || receiverId === userId) {
+        throw new Error('Invalid recipient');
+      }
+      if (body.callType && body.callType !== 'audio') {
+        throw new Error('Unsupported call type');
+      }
+      if (userCalls.has(userId)) {
+        throw new Error('You are already in a call');
+      }
+      if (!onlineSockets.has(receiverId)) {
+        throw new Error('User is offline');
+      }
+      if (userCalls.has(receiverId)) {
+        throw new Error('User is already in a call');
+      }
+
+      const [caller, receiver, related] = await Promise.all([
+        User.findById(userId).select(PUBLIC_USER_FIELDS).lean(),
+        User.findById(receiverId).select(PUBLIC_USER_FIELDS).lean(),
+        getRelatedUserIds(userId),
+      ]);
+
+      if (!caller || !receiver) throw new Error('User not found');
+      if (!related.has(receiverId)) {
+        throw new Error('You cannot call this user');
+      }
+      if (userCalls.has(userId) || userCalls.has(receiverId)) {
+        throw new Error('User is already in a call');
+      }
+
+      const call = {
+        callId: randomUUID(),
+        callerId: userId,
+        receiverId,
+        callType: 'audio',
+        createdAt: new Date(),
+        acceptedAt: null,
+        timeout: null,
+      };
+
+      activeCalls.set(call.callId, call);
+      userCalls.set(userId, call.callId);
+      userCalls.set(receiverId, call.callId);
+
+      io.to(`user:${receiverId}`).emit('call_incoming', {
+        callId: call.callId,
+        callType: call.callType,
+        caller: {
+          id: userId,
+          name: caller.name,
+          email: caller.email,
+        },
+      });
+      armCallTimeout(call);
+
+      reply({ ok: true, callId: call.callId, callType: call.callType });
+    } catch (err) {
+      reply({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('call_accept', (payload, ack) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const callId = body.callId;
+    const call = typeof callId === 'string' ? activeCalls.get(callId) : null;
+
+    const reply = (data) => {
+      if (typeof ack === 'function') ack(data);
+    };
+
+    if (!call) {
+      reply({ ok: false, error: 'Call is no longer available' });
+      return;
+    }
+    if (call.receiverId !== userId) {
+      reply({ ok: false, error: 'You cannot answer this call' });
+      return;
+    }
+    if (call.acceptedAt) {
+      reply({ ok: false, error: 'Call already answered' });
+      return;
+    }
+
+    if (call.timeout) {
+      clearTimeout(call.timeout);
+      call.timeout = null;
+    }
+    call.acceptedAt = new Date();
+
+    io.to(`user:${call.callerId}`).emit('call_accepted', {
+      callId: call.callId,
+      callType: call.callType,
+    });
+
+    reply({ ok: true });
+  });
+
+  socket.on('call_reject', (payload, ack) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const callId = body.callId;
+    const call = typeof callId === 'string' ? activeCalls.get(callId) : null;
+
+    const reply = (data) => {
+      if (typeof ack === 'function') ack(data);
+    };
+
+    if (!call || call.receiverId !== userId) {
+      reply({ ok: false, error: 'Call is no longer available' });
+      return;
+    }
+
+    endActiveCall(callId, call.acceptedAt ? 'Call ended' : 'Declined', userId);
+    reply({ ok: true });
+  });
+
+  socket.on('call_end', (payload, ack) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const callId = body.callId;
+    const call = typeof callId === 'string' ? activeCalls.get(callId) : null;
+
+    const reply = (data) => {
+      if (typeof ack === 'function') ack(data);
+    };
+
+    if (!call || !callOtherUserId(call, userId)) {
+      reply({ ok: false, error: 'Call is no longer available' });
+      return;
+    }
+
+    endActiveCall(
+      callId,
+      call.acceptedAt ? 'Call ended' : 'Call cancelled',
+      userId
+    );
+    reply({ ok: true });
+  });
+
+  socket.on('webrtc_signal', (payload) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const callId = body.callId;
+    const call = typeof callId === 'string' ? activeCalls.get(callId) : null;
+    const data = body.data;
+
+    if (!call || !call.acceptedAt) return;
+    if (!data || typeof data !== 'object') return;
+    if (!['offer', 'answer', 'candidate'].includes(data.type)) return;
+
+    const otherId = callOtherUserId(call, userId);
+    if (!otherId) return;
+
+    io.to(`user:${otherId}`).emit('webrtc_signal', {
+      callId,
+      from: userId,
+      data,
     });
   });
 
