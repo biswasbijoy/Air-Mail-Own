@@ -1,6 +1,7 @@
 import 'package:airmail/DesignUI/app_avatar.dart';
 import 'package:airmail/Screens/developer_profile_screen.dart';
 import 'package:airmail/services/session.dart';
+import 'package:airmail/theme/theme_controller.dart';
 import 'package:flutter/material.dart';
 
 class DrawerComponent extends StatelessWidget {
@@ -70,18 +71,16 @@ class DrawerComponent extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Theme information',
+                  tooltip: Theme.of(context).brightness == Brightness.dark
+                      ? 'Switch to light theme'
+                      : 'Switch to dark theme',
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Theme follows your device settings: Display > Theme.',
-                        ),
-                      ),
-                    );
+                    ThemeController.instance.toggleTheme(context);
                   },
                   icon: Icon(
-                    Icons.brightness_4_outlined,
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Icons.light_mode_outlined
+                        : Icons.dark_mode_outlined,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),

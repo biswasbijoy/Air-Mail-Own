@@ -35,6 +35,35 @@ class ApiService {
 
   final String token;
 
+  /// Fetches dynamic ICE servers (STUN & TURN) from the backend.
+  static Future<List<Map<String, dynamic>>?> fetchIceServers({
+    http.Client? client,
+  }) async {
+    final httpClient = client ?? http.Client();
+    try {
+      final response = await httpClient
+          .get(Uri.parse('$baseUrl/api/ice-servers'))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['iceServers'] is List) {
+          final list = (data['iceServers'] as List)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          if (list.isNotEmpty) return list;
+        }
+      }
+    } catch (_) {
+      // Fall back to built-in ICE servers on network or parsing error
+    } finally {
+      if (client == null) {
+        httpClient.close();
+      }
+    }
+    return null;
+  }
+
   static Future<Session> login({
     required String email,
     required String password,

@@ -18,7 +18,7 @@ theme with automatic light/dark mode.
 - `flutter_webrtc` for peer-to-peer audio media and microphone capture
 - `shared_preferences` for session persistence
 - `image_picker` for the camera demo screen
-- Theme: `ThemeMode.system`; colors in `lib/theme/app_colors.dart`
+- Theme: `ThemeController` (persisted in `shared_preferences`, toggleable in drawer, defaults to system); colors in `lib/theme/app_colors.dart`
 
 ### Backend
 - Node.js 18+, Express 4, Mongoose 7
@@ -38,8 +38,12 @@ theme with automatic light/dark mode.
 | `CORS_ORIGIN` | Allowed origin, defaults to `*` |
 | `JWT_EXPIRES_IN` | Token lifetime, defaults to `7d` |
 | `CALL_RING_TIMEOUT_MS` | Ring timeout for unanswered calls, defaults to `45000` |
+| `TURN_URL` | Optional backend TURN relay URL(s) for cross-network WebRTC calls |
+| `TURN_USERNAME` | Optional backend TURN username |
+| `TURN_CREDENTIAL` | Optional backend TURN credential |
 
 The server exits at startup when `MONGODB_URI` or `JWT_SECRET` is missing.
+STUN and TURN relays (OpenRelay over UDP & TCP) are configured by default for reliable cross-network calls.
 
 Optional Flutter build-time TURN configuration:
 
@@ -49,8 +53,7 @@ Optional Flutter build-time TURN configuration:
 | `AIRMAIL_TURN_USERNAME` | TURN username |
 | `AIRMAIL_TURN_CREDENTIAL` | TURN credential |
 
-STUN-only is used when these are omitted. Credentials compiled into an app can
-be extracted, so production should use short-lived TURN credentials.
+Defaults to backend dynamic ICE servers (`/api/ice-servers`) and built-in STUN/TURN relays if omitted.
 
 ## Project Structure
 

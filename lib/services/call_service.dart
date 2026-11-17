@@ -5,6 +5,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../Model/call_event.dart';
 import '../Model/chat_model.dart';
+import 'api_service.dart';
 import 'realtime_service.dart';
 
 enum CallState { idle, outgoing, incoming, connecting, active }
@@ -14,14 +15,34 @@ class CallService extends ChangeNotifier {
 
   static final CallService instance = CallService._();
 
-  static const List<Map<String, dynamic>> _iceServers = [
+  /// Default reliable STUN and TURN relay servers used for cross-network connectivity.
+  static const List<Map<String, dynamic>> _defaultIceServers = [
     {
       'urls': [
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:openrelay.metered.ca:80',
       ],
     },
+    {
+      'urls': [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+      ],
+      'username': 'openrelayproject',
+      'credential': 'openrelayproject',
+    },
+    {
+      'urls': [
+        'turn:openrelay.metered.ca:443?transport=tcp',
+      ],
+      'username': 'openrelayproject',
+      'credential': 'openrelayproject',
+    },
   ];
+
+  List<Map<String, dynamic>>? _dynamicIceServers;
 
   static const String _turnUrl = String.fromEnvironment('AIRMAIL_TURN_URL');
   static const String _turnUsername =
@@ -63,8 +84,9 @@ class CallService extends ChangeNotifier {
   DateTime? get connectedAt => _connectedAt;
   MediaStream? get remoteStream => _remoteStream;
 
-  static List<Map<String, dynamic>> get _configuredIceServers {
-    final servers = <Map<String, dynamic>>[..._iceServers];
+  List<Map<String, dynamic>> get _configuredIceServers {
+    final base = _dynamicIceServers ?? _defaultIceServers;
+    final servers = <Map<String, dynamic>>[...base];
     if (_turnUrl.isNotEmpty) {
       servers.add({
         'urls': _turnUrl.split(',').map((url) => url.trim()).toList(),
@@ -81,6 +103,17 @@ class CallService extends ChangeNotifier {
     _callSubscription =
         RealtimeService.instance.callEvents.listen(_handleCallEvent);
     RealtimeService.instance.connected.addListener(_handleConnectionChanged);
+    unawaited(refreshIceServers());
+  }
+
+  /// Fetches and updates dynamic ICE servers (STUN/TURN) from the backend.
+  Future<void> refreshIceServers() async {
+    try {
+      final servers = await ApiService.fetchIceServers();
+      if (servers != null && servers.isNotEmpty) {
+        _dynamicIceServers = servers;
+      }
+    } catch (_) {}
   }
 
   void detach() {
@@ -235,11 +268,14 @@ class CallService extends ChangeNotifier {
       'sdpSemantics': 'unified-plan',
       'bundlePolicy': 'max-bundle',
       'rtcpMuxPolicy': 'require',
+      'iceTransportPolicy': 'all',
+      'iceCandidatePoolSize': 2,
     });
 
     final connection = _peerConnection!;
     connection.onIceCandidate = _handleLocalCandidate;
     connection.onConnectionState = _handleConnectionState;
+    connection.onIceConnectionState = _handleIceConnectionState;
     connection.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
         unawaited(_attachRemoteStream(event.streams.first));
@@ -268,14 +304,39 @@ class CallService extends ChangeNotifier {
     });
   }
 
+  void _handleIceConnectionState(RTCIceConnectionState iceState) {
+    debugPrint('WebRTC ICE state: $iceState');
+    switch (iceState) {
+      case RTCIceConnectionState.RTCIceConnectionStateConnected:
+      case RTCIceConnectionState.RTCIceConnectionStateCompleted:
+        if (_state == CallState.idle) return;
+        _cancelRingTimeout();
+        _connectedAt ??= DateTime.now();
+        if (_state == CallState.connecting) {
+          _state = CallState.active;
+          notifyListeners();
+        }
+        break;
+      case RTCIceConnectionState.RTCIceConnectionStateFailed:
+        if (_state == CallState.idle) return;
+        unawaited(endCall(reason: 'Connection failed'));
+        break;
+      default:
+        break;
+    }
+  }
+
   void _handleConnectionState(RTCPeerConnectionState connectionState) {
+    debugPrint('WebRTC peer connection state: $connectionState');
     switch (connectionState) {
       case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
         if (_state == CallState.idle) return;
         _cancelRingTimeout();
-        _connectedAt = DateTime.now();
-        _state = CallState.active;
-        notifyListeners();
+        _connectedAt ??= DateTime.now();
+        if (_state == CallState.connecting) {
+          _state = CallState.active;
+          notifyListeners();
+        }
         break;
       case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
         if (_state == CallState.idle) return;
@@ -376,7 +437,10 @@ class CallService extends ChangeNotifier {
         );
         _remoteDescriptionSet = true;
         await _flushPendingCandidates();
-        final answer = await connection.createAnswer();
+        final answer = await connection.createAnswer({
+          'offerToReceiveAudio': 1,
+          'offerToReceiveVideo': 0,
+        });
         await connection.setLocalDescription(answer);
         final callId = _callId;
         if (callId != null) {
@@ -407,7 +471,11 @@ class CallService extends ChangeNotifier {
         if (!_remoteDescriptionSet) {
           _pendingCandidates.add(iceCandidate);
         } else {
-          await connection.addCandidate(iceCandidate);
+          try {
+            await connection.addCandidate(iceCandidate);
+          } catch (error) {
+            debugPrint('Warning: Could not add ICE candidate: $error');
+          }
         }
         break;
     }
@@ -420,7 +488,10 @@ class CallService extends ChangeNotifier {
       throw const _CallFailure('Call session is not ready.');
     }
 
-    final offer = await connection.createOffer();
+    final offer = await connection.createOffer({
+      'offerToReceiveAudio': 1,
+      'offerToReceiveVideo': 0,
+    });
     await connection.setLocalDescription(offer);
     RealtimeService.instance.sendCallSignal(callId, {
       'type': offer.type,
@@ -435,7 +506,11 @@ class CallService extends ChangeNotifier {
     final candidates = List<RTCIceCandidate>.from(_pendingCandidates);
     _pendingCandidates.clear();
     for (final candidate in candidates) {
-      await connection.addCandidate(candidate);
+      try {
+        await connection.addCandidate(candidate);
+      } catch (error) {
+        debugPrint('Warning: Could not add buffered candidate: $error');
+      }
     }
   }
 
