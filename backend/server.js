@@ -293,22 +293,56 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/api/ice-servers', (req, res) => {
+app.get('/api/ice-servers', async (req, res) => {
   const turnUrl = process.env.TURN_URL;
   const turnUsername = process.env.TURN_USERNAME;
   const turnCredential = process.env.TURN_CREDENTIAL;
+  const meteredApiKey = process.env.METERED_API_KEY;
+  const meteredDomain = process.env.METERED_DOMAIN;
 
-  const iceServers = [
+  const defaultStun = [
     {
       urls: [
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
         'stun:stun2.l.google.com:19302',
-        'stun:openrelay.metered.ca:80',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302',
       ],
     },
   ];
 
+  if (meteredApiKey && meteredDomain) {
+    try {
+      const cleanDomain = meteredDomain
+        .replace(/^https?:\/\//, '')
+        .replace(/\.metered\.live\/?$/, '')
+        .trim();
+      const key = meteredApiKey.trim();
+
+      const endpoints = [
+        `https://${cleanDomain}.metered.live/api/v2/turn/credentials?secretKey=${key}`,
+        `https://${cleanDomain}.metered.live/api/v1/turn/credentials?apiKey=${key}`,
+        `https://${cleanDomain}.metered.live/api/v1/turn/credentials?secretKey=${key}`,
+      ];
+
+      for (const url of endpoints) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const meteredServers = await response.json();
+            if (Array.isArray(meteredServers) && meteredServers.length > 0) {
+              return res.json({ iceServers: meteredServers });
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.error('Error fetching Metered ICE servers:', e.message);
+    }
+  }
+
+  const iceServers = [...defaultStun];
   if (turnUrl && turnUsername && turnCredential) {
     iceServers.push({
       urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
@@ -316,21 +350,16 @@ app.get('/api/ice-servers', (req, res) => {
       credential: turnCredential,
     });
   } else {
-    iceServers.push(
-      {
-        urls: [
-          'turn:openrelay.metered.ca:80',
-          'turn:openrelay.metered.ca:443',
-        ],
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-      {
-        urls: ['turn:openrelay.metered.ca:443?transport=tcp'],
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      }
-    );
+    iceServers.push({
+      urls: [
+        'turn:standard.relay.metered.ca:80',
+        'turn:standard.relay.metered.ca:80?transport=tcp',
+        'turn:standard.relay.metered.ca:443',
+        'turns:standard.relay.metered.ca:443?transport=tcp',
+      ],
+      username: '1c3660af9080843e40305865',
+      credential: 'CkTLHwErmL12fwMn',
+    });
   }
 
   return res.json({ iceServers });

@@ -15,30 +15,24 @@ class CallService extends ChangeNotifier {
 
   static final CallService instance = CallService._();
 
-  /// Default reliable STUN and TURN relay servers used for cross-network connectivity.
+  /// Default reliable STUN and Metered TURN relay servers for cross-network WebRTC.
   static const List<Map<String, dynamic>> _defaultIceServers = [
     {
       'urls': [
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-        'stun:openrelay.metered.ca:80',
+        'stun:stun.relay.metered.ca:80',
       ],
     },
     {
       'urls': [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
+        'turn:standard.relay.metered.ca:80',
+        'turn:standard.relay.metered.ca:80?transport=tcp',
+        'turn:standard.relay.metered.ca:443',
+        'turns:standard.relay.metered.ca:443?transport=tcp',
       ],
-      'username': 'openrelayproject',
-      'credential': 'openrelayproject',
-    },
-    {
-      'urls': [
-        'turn:openrelay.metered.ca:443?transport=tcp',
-      ],
-      'username': 'openrelayproject',
-      'credential': 'openrelayproject',
+      'username': '1c3660af9080843e40305865',
+      'credential': 'CkTLHwErmL12fwMn',
     },
   ];
 
