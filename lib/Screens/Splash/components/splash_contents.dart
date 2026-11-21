@@ -5,16 +5,33 @@ class SplashContents extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          'Welcome to',
-          style: Theme.of(context).textTheme.bodyMedium,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset(
+            'assets/images/airmail_logo.png',
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
         ),
-        Text(
-          'AirMail',
-          style: Theme.of(context).textTheme.titleLarge,
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome to',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            Text(
+              'AirMail',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ],
         ),
       ],
     );

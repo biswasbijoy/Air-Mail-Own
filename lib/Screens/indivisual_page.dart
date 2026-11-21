@@ -9,6 +9,7 @@ import 'package:airmail/services/api_service.dart';
 import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
+import 'package:airmail/services/settings_service.dart';
 import 'package:airmail/theme/app_colors.dart';
 import 'package:airmail/utils/time_format.dart';
 import 'package:flutter/material.dart';
@@ -331,7 +332,10 @@ class _IndivisualPageState extends State<IndivisualPage> {
                     child: TextField(
                       controller: _controller,
                       minLines: 1,
-                      maxLines: 5,
+                      maxLines: SettingsService.instance.enterIsSend ? 1 : 5,
+                      textInputAction: SettingsService.instance.enterIsSend
+                          ? TextInputAction.send
+                          : TextInputAction.newline,
                       textCapitalization: TextCapitalization.sentences,
                       onSubmitted: (_) => _send(),
                       decoration: InputDecoration(

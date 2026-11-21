@@ -1,6 +1,7 @@
 import 'package:airmail/DesignUI/app_avatar.dart';
-import 'package:airmail/Screens/developer_profile_screen.dart';
+import 'package:airmail/Screens/settings_screen.dart';
 import 'package:airmail/services/session.dart';
+import 'package:airmail/services/share_service.dart';
 import 'package:airmail/theme/theme_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -101,7 +102,14 @@ class DrawerComponent extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
             title: const Text('Settings'),
-            onTap: () => _showUnavailable(context, 'Settings'),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SettingsScreen(session: session),
+                ),
+              );
+            },
           ),
           ListTile(
             leading: Icon(
@@ -109,30 +117,12 @@ class DrawerComponent extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
             title: const Text('Invite friends'),
-            onTap: () => _showUnavailable(context, 'Invite friends'),
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.help_outline_outlined,
-              color: scheme.onSurfaceVariant,
-            ),
-            title: const Text('AirMail features'),
-            onTap: () => _showUnavailable(context, 'AirMail features'),
-          ),
-          const Divider(),
-          ListTile(
-            leading: Icon(Icons.code_outlined, color: scheme.primary),
-            title: Text(
-              'Developer contact',
-              style: TextStyle(color: scheme.primary),
-            ),
             onTap: () {
               Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const DeveloperScreen()),
-              );
+              ShareService.showInviteModal(context, session);
             },
           ),
+          const Divider(),
           ListTile(
             leading: Icon(Icons.logout, color: scheme.error),
             title: Text('Log out', style: TextStyle(color: scheme.error)),
@@ -140,6 +130,37 @@ class DrawerComponent extends StatelessWidget {
               Navigator.of(context).pop();
               onLogout();
             },
+          ),
+          const SizedBox(height: 12),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/images/airmail_logo.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AirMail',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

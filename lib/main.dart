@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'Screens/home_screen.dart';
 import 'Screens/login_screen.dart';
 import 'services/session.dart';
+import 'services/settings_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.loadThemeMode();
+  await SettingsService.instance.loadSettings();
   runApp(const MyApp());
 }
 

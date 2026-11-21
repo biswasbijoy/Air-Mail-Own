@@ -14,7 +14,32 @@ class Introduction extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.message, size: 100, color: scheme.primary),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Image.asset(
+                  'assets/images/airmail_logo.png',
+                  width: 112,
+                  height: 112,
+                  fit: BoxFit.fill,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.message,
+                    size: 100,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 30),
             Text(
               'AirMail - Modern Messaging',

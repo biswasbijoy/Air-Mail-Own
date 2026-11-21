@@ -89,6 +89,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _callScreenKey.currentState?.refresh();
   }
 
+  Future<void> _openCallPicker() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SelectContact(
+          session: widget.session,
+          embedded: false,
+          forCall: true,
+        ),
+      ),
+    );
+    _callScreenKey.currentState?.refresh();
+  }
+
   void _onDestinationSelected(int index) {
     final previous = _selectedIndex;
     setState(() => _selectedIndex = index);
@@ -118,7 +131,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/images/airmail_logo.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(_selectedIndex == 0 ? 'AirMail' : _title),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
             tooltip: 'More options',
@@ -181,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : (_selectedIndex == 2
               ? FloatingActionButton(
                   tooltip: 'New call',
-                  onPressed: _openContactPicker,
+                  onPressed: _openCallPicker,
                   child: const Icon(Icons.add_call),
                 )
               : null),

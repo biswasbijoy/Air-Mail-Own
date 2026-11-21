@@ -1,6 +1,6 @@
 {
-    "name": "airmail",
-    "short_name": "airmail",
+    "name": "AirMail",
+    "short_name": "AirMail",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

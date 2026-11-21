@@ -4,6 +4,7 @@ import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Screens/add_contact_page.dart';
 import 'package:airmail/Screens/indivisual_page.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/app_colors.dart';
@@ -14,10 +15,12 @@ class SelectContact extends StatefulWidget {
     super.key,
     required this.session,
     this.embedded = true,
+    this.forCall = false,
   });
 
   final Session session;
   final bool embedded;
+  final bool forCall;
 
   @override
   State<SelectContact> createState() => _SelectContactState();
@@ -84,6 +87,18 @@ class _SelectContactState extends State<SelectContact> {
         ),
       ),
     );
+  }
+
+  Future<void> _startCall(ChatModel contact) async {
+    if (contact.id == null) return;
+    Navigator.of(context).pop();
+    final success = await CallService.instance.startCall(contact);
+    if (!success && mounted) {
+      final err = CallService.instance.lastError ?? 'Could not start call.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err)),
+      );
+    }
   }
 
   Future<void> _removeContact(ChatModel contact) async {
@@ -203,8 +218,20 @@ class _SelectContactState extends State<SelectContact> {
                               final contact = filtered[index];
                               return ContactCard(
                                 contact: contact,
-                                onTap: () => _openChat(contact),
+                                onTap: () => widget.forCall
+                                    ? _startCall(contact)
+                                    : _openChat(contact),
                                 onRemove: () => _removeContact(contact),
+                                trailing: widget.forCall
+                                    ? IconButton(
+                                        icon: const Icon(
+                                          Icons.call,
+                                          color: AppColors.primary,
+                                        ),
+                                        tooltip: 'Call ${contact.name ?? ''}',
+                                        onPressed: () => _startCall(contact),
+                                      )
+                                    : null,
                               );
                             },
                           ),
@@ -220,7 +247,9 @@ class _SelectContactState extends State<SelectContact> {
     if (widget.embedded) return body;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Select contact')),
+      appBar: AppBar(
+        title: Text(widget.forCall ? 'New call' : 'Select contact'),
+      ),
       body: body,
     );
   }

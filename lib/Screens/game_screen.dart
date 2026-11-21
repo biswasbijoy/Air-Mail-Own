@@ -1,5 +1,4 @@
-import 'package:airmail/Games/Color_Guess/guess_color.dart';
-import 'package:airmail/Games/Rock_Paper_Scissor/rock_paper_scissor.dart';
+import 'package:airmail/Games/Ludo/ludo_game.dart';
 import 'package:airmail/Games/Tic_Tac_Toe/tic_tac_toe.dart';
 import 'package:flutter/material.dart';
 
@@ -19,10 +18,11 @@ class GameScreen extends StatelessWidget {
           childAspectRatio: 1,
           children: [
             _GameTile(
-              icon: Icons.back_hand_outlined,
-              label: 'Rock Paper Scissors',
+              icon: Icons.casino_outlined,
+              label: 'Ludo Multiplayer',
+              badge: 'Popular',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const RockPaperScissor()),
+                MaterialPageRoute(builder: (_) => const LudoGame()),
               ),
             ),
             _GameTile(
@@ -30,13 +30,6 @@ class GameScreen extends StatelessWidget {
               label: 'Tic Tac Toe',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const TicTacToe()),
-              ),
-            ),
-            _GameTile(
-              icon: Icons.palette_outlined,
-              label: 'Color Guess',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ColorGuess()),
               ),
             ),
           ],
@@ -49,11 +42,13 @@ class GameScreen extends StatelessWidget {
 class _GameTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? badge;
   final VoidCallback onTap;
 
   const _GameTile({
     required this.icon,
     required this.label,
+    this.badge,
     required this.onTap,
   });
 
@@ -67,32 +62,58 @@ class _GameTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 28, color: scheme.primary),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 28, color: scheme.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
+            ),
+            if (badge != null)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

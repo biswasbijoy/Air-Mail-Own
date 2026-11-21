@@ -120,7 +120,11 @@ class CallScreenState extends State<CallScreen> {
   void _openContactPicker() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SelectContact(session: widget.session, embedded: false),
+        builder: (_) => SelectContact(
+          session: widget.session,
+          embedded: false,
+          forCall: true,
+        ),
       ),
     );
   }

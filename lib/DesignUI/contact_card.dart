@@ -10,11 +10,13 @@ class ContactCard extends StatelessWidget {
     required this.contact,
     this.onTap,
     this.onRemove,
+    this.trailing,
   });
 
   final ChatModel contact;
   final VoidCallback? onTap;
   final VoidCallback? onRemove;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +56,7 @@ class ContactCard extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
           ),
-          trailing: Row(
+          trailing: trailing ?? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
