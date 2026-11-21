@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'Screens/call_page.dart';
 import 'Screens/home_screen.dart';
 import 'Screens/login_screen.dart';
+import 'services/background_service.dart';
 import 'services/call_service.dart';
 import 'services/notification_sound_service.dart';
 import 'services/session.dart';
@@ -20,10 +21,15 @@ void main() async {
 
   NotificationSoundService.instance.onReturnToCall = () {
     if (CallService.instance.state != CallState.idle) {
+      BackgroundService.bringToForeground();
       rootNavigatorKey.currentState?.push(
         MaterialPageRoute<void>(builder: (_) => const CallPage()),
       );
     }
+  };
+
+  NotificationSoundService.instance.onDeclineCall = () {
+    CallService.instance.declineCall();
   };
 
   runApp(const MyApp());

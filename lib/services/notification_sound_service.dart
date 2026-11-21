@@ -24,6 +24,7 @@ class NotificationSoundService {
   bool _initialized = false;
 
   VoidCallback? onReturnToCall;
+  VoidCallback? onDeclineCall;
 
   static const int callNotificationId = 8888;
   static const int messageNotificationBaseId = 1000;
@@ -54,11 +55,45 @@ class NotificationSoundService {
       await _notifications.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (response) {
-          if (response.id == callNotificationId) {
+          if (response.actionId == 'answer_call') {
+            onReturnToCall?.call();
+          } else if (response.actionId == 'decline_call') {
+            onDeclineCall?.call();
+          } else if (response.id == callNotificationId) {
             onReturnToCall?.call();
           }
         },
       );
+
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final androidImpl = _notifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        await androidImpl?.requestNotificationsPermission();
+        await androidImpl?.requestExactAlarmsPermission();
+
+        await androidImpl?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'airmail_calls_v2',
+            'Incoming Calls',
+            description: 'Notifications for incoming calls',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+          ),
+        );
+        await androidImpl?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'airmail_messages_v2',
+            'Messages',
+            description: 'Notifications for incoming chat messages',
+            importance: Importance.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+      }
 
       // Pre-synthesize tone wav bytes
       _ringtoneWav ??= _generateToneWav(
@@ -100,6 +135,24 @@ class NotificationSoundService {
     if (settings.sound) {
       try {
         _ringPlayer = AudioPlayer();
+        await _ringPlayer?.setAudioContext(
+          AudioContext(
+            android: const AudioContextAndroid(
+              isSpeakerphoneOn: true,
+              stayAwake: true,
+              contentType: AndroidContentType.sonification,
+              usageType: AndroidUsageType.notificationRingtone,
+              audioMode: AndroidAudioMode.ringtone,
+              audioFocus: AndroidAudioFocus.gainTransientExclusive,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.playback,
+              options: {
+                AVAudioSessionOptions.defaultToSpeaker,
+              },
+            ),
+          ),
+        );
         await _ringPlayer?.setReleaseMode(ReleaseMode.loop);
         if (_ringtoneWav != null) {
           await _ringPlayer?.play(BytesSource(_ringtoneWav!));
@@ -137,6 +190,21 @@ class NotificationSoundService {
         _chimePlayer?.stop();
         _chimePlayer?.dispose();
         _chimePlayer = AudioPlayer();
+        await _chimePlayer?.setAudioContext(
+          AudioContext(
+            android: const AudioContextAndroid(
+              isSpeakerphoneOn: true,
+              stayAwake: false,
+              contentType: AndroidContentType.sonification,
+              usageType: AndroidUsageType.notificationCommunicationInstant,
+              audioMode: AndroidAudioMode.normal,
+              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.ambient,
+            ),
+          ),
+        );
         if (_chimeWav != null) {
           await _chimePlayer?.play(BytesSource(_chimeWav!));
         } else {
@@ -171,14 +239,17 @@ class NotificationSoundService {
 
     try {
       const androidDetails = AndroidNotificationDetails(
-        'airmail_messages',
+        'airmail_messages_v2',
         'Messages',
         channelDescription: 'Notifications for incoming chat messages',
         importance: Importance.high,
         priority: Priority.high,
+        category: AndroidNotificationCategory.message,
+        audioAttributesUsage: AudioAttributesUsage.notification,
         showWhen: true,
         enableVibration: true,
         playSound: true,
+        visibility: NotificationVisibility.public,
       );
       const details = NotificationDetails(
         android: androidDetails,
@@ -205,15 +276,30 @@ class NotificationSoundService {
   Future<void> showIncomingCallNotification({required String callerName}) async {
     try {
       const androidDetails = AndroidNotificationDetails(
-        'airmail_calls',
+        'airmail_calls_v2',
         'Incoming Calls',
         channelDescription: 'Notifications for incoming calls',
         importance: Importance.max,
-        priority: Priority.high,
+        priority: Priority.max,
         category: AndroidNotificationCategory.call,
+        audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
         ongoing: true,
         autoCancel: false,
         fullScreenIntent: true,
+        visibility: NotificationVisibility.public,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'decline_call',
+            'Decline',
+            showsUserInterface: false,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            'answer_call',
+            'Answer',
+            showsUserInterface: true,
+          ),
+        ],
       );
       const details = NotificationDetails(
         android: androidDetails,
@@ -240,7 +326,7 @@ class NotificationSoundService {
   }) async {
     try {
       final androidDetails = AndroidNotificationDetails(
-        'airmail_calls',
+        'airmail_calls_v2',
         'Active Call',
         channelDescription: 'Ongoing audio call in progress',
         importance: Importance.low,

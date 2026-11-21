@@ -7,6 +7,7 @@ import '../Model/call_event.dart';
 import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import 'api_service.dart';
+import 'background_service.dart';
 import 'call_history_store.dart';
 import 'notification_sound_service.dart';
 import 'realtime_service.dart';
@@ -423,6 +424,7 @@ class CallService extends ChangeNotifier {
     _muted = false;
     _speakerOn = false;
     _armRingTimeout();
+    unawaited(BackgroundService.bringToForeground());
     unawaited(NotificationSoundService.instance.startIncomingRingtone());
     unawaited(NotificationSoundService.instance.showIncomingCallNotification(
       callerName: caller?.name ?? 'AirMail User',

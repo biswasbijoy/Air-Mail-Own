@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:airmail/DesignUI/drawer_components.dart';
 import 'package:airmail/Page/chat_page.dart';
 import 'package:airmail/Screens/call_page.dart';
@@ -5,6 +7,7 @@ import 'package:airmail/Screens/calls_screen.dart';
 import 'package:airmail/Screens/game_screen.dart';
 import 'package:airmail/Screens/login_screen.dart';
 import 'package:airmail/Screens/select_contact_page.dart';
+import 'package:airmail/services/background_service.dart';
 import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
@@ -35,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     CallService.instance.currentUserId = widget.session.userId;
     CallService.instance.attach();
     CallService.instance.addListener(_handleCallStateChanged);
+    unawaited(BackgroundService.start());
     _pages = [
       ChatPage(key: _chatPageKey, session: widget.session),
       SelectContact(session: widget.session),
@@ -67,6 +71,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final state = CallService.instance.state;
     if (state != CallState.outgoing && state != CallState.incoming) return;
 
+    if (state == CallState.incoming) {
+      unawaited(BackgroundService.bringToForeground());
+    }
+
     _callPageOpen = true;
     final route = MaterialPageRoute<void>(builder: (_) => const CallPage());
     Navigator.of(context).push(route).whenComplete(() {
@@ -82,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _logout() async {
+    unawaited(BackgroundService.stop());
     RealtimeService.instance.disconnect();
     await SessionStore.clear();
     if (!mounted) return;

@@ -913,6 +913,8 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: CORS_ORIGIN },
+  pingInterval: 10000,
+  pingTimeout: 30000,
 });
 
 io.use((socket, next) => {
