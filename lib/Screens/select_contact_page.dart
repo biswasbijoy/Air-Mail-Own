@@ -161,6 +161,7 @@ class _SelectContactState extends State<SelectContact> {
   }
 
   Widget _buildBody() {
+    final scheme = Theme.of(context).colorScheme;
     final filtered = _filteredContacts;
 
     return Column(
@@ -169,20 +170,37 @@ class _SelectContactState extends State<SelectContact> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: TextField(
             onChanged: (query) => setState(() => _searchQuery = query),
-            decoration: const InputDecoration(
-              hintText: 'Search name or email',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: 'Search name or email...',
+              prefixIcon: Icon(Icons.search, size: 20, color: scheme.onSurfaceVariant),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide(color: scheme.primary, width: 1.2),
+              ),
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: SizedBox(
             width: double.infinity,
+            height: 44,
             child: FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
               onPressed: _openAddContact,
-              icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('Add contact'),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+              label: const Text('Add contact', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ),
@@ -201,19 +219,25 @@ class _SelectContactState extends State<SelectContact> {
                     )
                   : filtered.isEmpty
                       ? EmptyState(
-                          icon: Icons.person_outline,
+                          icon: Icons.person_outline_rounded,
                           title:
-                              _contacts.isEmpty ? 'No contacts' : 'No matches',
+                              _contacts.isEmpty ? 'No contacts yet' : 'No matches found',
                           subtitle: _contacts.isEmpty
                               ? 'Add a contact by email to start chatting.'
-                              : 'No contacts match your search.',
+                              : 'No contacts match "$_searchQuery".',
                         )
                       : RefreshIndicator(
                           onRefresh: _loadContacts,
-                          color: AppColors.primary,
-                          child: ListView.builder(
+                          color: scheme.primary,
+                          child: ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: filtered.length,
+                            separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              indent: 82,
+                              endIndent: 16,
+                              color: scheme.outlineVariant.withValues(alpha: 0.35),
+                            ),
                             itemBuilder: (context, index) {
                               final contact = filtered[index];
                               return ContactCard(
@@ -223,13 +247,23 @@ class _SelectContactState extends State<SelectContact> {
                                     : _openChat(contact),
                                 onRemove: () => _removeContact(contact),
                                 trailing: widget.forCall
-                                    ? IconButton(
-                                        icon: const Icon(
-                                          Icons.call,
-                                          color: AppColors.primary,
+                                    ? Container(
+                                        width: 38,
+                                        height: 38,
+                                        decoration: BoxDecoration(
+                                          color: scheme.primary.withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
                                         ),
-                                        tooltip: 'Call ${contact.name ?? ''}',
-                                        onPressed: () => _startCall(contact),
+                                        child: IconButton(
+                                          padding: EdgeInsets.zero,
+                                          icon: Icon(
+                                            Icons.call_rounded,
+                                            size: 19,
+                                            color: scheme.primary,
+                                          ),
+                                          tooltip: 'Call ${contact.name ?? ''}',
+                                          onPressed: () => _startCall(contact),
+                                        ),
                                       )
                                     : null,
                               );

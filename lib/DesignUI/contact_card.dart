@@ -1,7 +1,6 @@
 import 'package:airmail/DesignUI/app_avatar.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/services/realtime_service.dart';
-import 'package:airmail/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class ContactCard extends StatelessWidget {
@@ -30,20 +29,19 @@ class ContactCard extends StatelessWidget {
           fallback: contact.status == 'online',
         );
         final scheme = Theme.of(context).colorScheme;
-        final onlineColor = Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkOnline
-            : AppColors.lightOnline;
 
         return ListTile(
           onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
           leading: icon != null && icon.isNotEmpty
-              ? CircleAvatar(radius: 25, backgroundImage: AssetImage(icon))
-              : AppAvatar(name: contact.name, size: 50, online: isOnline),
+              ? CircleAvatar(radius: 26, backgroundImage: AssetImage(icon))
+              : AppAvatar(name: contact.name, size: 52, online: isOnline),
           title: Text(
             contact.name ?? 'Unknown',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
               color: scheme.onSurface,
             ),
           ),
@@ -56,37 +54,60 @@ class ContactCard extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
           ),
-          trailing: trailing ?? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isOnline ? 'Online' : 'Offline',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isOnline ? onlineColor : scheme.onSurfaceVariant,
-                ),
-              ),
-              if (onRemove != null)
-                PopupMenuButton<String>(
-                  tooltip: 'Contact options',
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  onSelected: (value) {
-                    if (value == 'remove') onRemove!();
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem<String>(
-                      value: 'remove',
-                      child: Text('Remove contact'),
+          trailing: trailing ??
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isOnline
+                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                          : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
-                ),
-            ],
-          ),
+                    child: Text(
+                      isOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isOnline
+                            ? const Color(0xFF10B981)
+                            : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (onRemove != null)
+                    PopupMenuButton<String>(
+                      tooltip: 'Contact options',
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'remove') onRemove!();
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem<String>(
+                          value: 'remove',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_remove_outlined,
+                                  size: 18, color: Color(0xFFEF4444)),
+                              SizedBox(width: 10),
+                              Text('Remove contact',
+                                  style: TextStyle(color: Color(0xFFEF4444))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
         );
       },
     );

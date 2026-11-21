@@ -8,6 +8,7 @@ import 'package:airmail/Screens/select_contact_page.dart';
 import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
+import 'package:airmail/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -131,26 +132,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/images/airmail_logo.png',
-                width: 26,
-                height: 26,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/images/airmail_logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            Text(_selectedIndex == 0 ? 'AirMail' : _title),
+            Text(
+              _selectedIndex == 0 ? 'AirMail' : _title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                letterSpacing: -0.3,
+              ),
+            ),
           ],
         ),
         actions: [
           PopupMenuButton<String>(
             tooltip: 'More options',
+            icon: const Icon(Icons.more_vert_rounded),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onSelected: (value) {
               if (value == 'new_contact') {
                 _openContactPicker();
@@ -161,57 +184,115 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: 'new_contact',
-                child: Text('New chat'),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('New chat'),
+                  ],
+                ),
               ),
               PopupMenuItem(
                 value: 'logout',
-                child: Text('Log out'),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
+                    SizedBox(width: 12),
+                    Text('Log out', style: TextStyle(color: Color(0xFFEF4444))),
+                  ],
+                ),
               ),
             ],
           ),
         ],
       ),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: scheme.surface,
-        indicatorColor: scheme.primary.withValues(alpha: 0.2),
-        height: 68,
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onDestinationSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Inbox',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: scheme.outlineVariant.withValues(alpha: 0.4),
+              width: 1,
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Contacts',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.call_outlined),
-            selectedIcon: Icon(Icons.call),
-            label: 'Calls',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.sports_esports_outlined),
-            selectedIcon: Icon(Icons.sports_esports),
-            label: 'Games',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          backgroundColor: scheme.surface,
+          indicatorColor: scheme.primary.withValues(alpha: 0.16),
+          height: 66,
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onDestinationSelected,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              selectedIcon: Icon(Icons.chat_bubble_rounded),
+              label: 'Inbox',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline_rounded),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: 'Contacts',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.call_outlined),
+              selectedIcon: Icon(Icons.call_rounded),
+              label: 'Calls',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.sports_esports_outlined),
+              selectedIcon: Icon(Icons.sports_esports_rounded),
+              label: 'Games',
+            ),
+          ],
+        ),
       ),
       floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              tooltip: 'New chat',
-              onPressed: _openContactPicker,
-              child: const Icon(Icons.edit_outlined),
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.38),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                focusElevation: 0,
+                hoverElevation: 0,
+                highlightElevation: 0,
+                tooltip: 'New chat',
+                onPressed: _openContactPicker,
+                child: const Icon(Icons.edit_rounded, color: Colors.white),
+              ),
             )
           : (_selectedIndex == 2
-              ? FloatingActionButton(
-                  tooltip: 'New call',
-                  onPressed: _openCallPicker,
-                  child: const Icon(Icons.add_call),
+              ? Container(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.38),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    focusElevation: 0,
+                    hoverElevation: 0,
+                    highlightElevation: 0,
+                    tooltip: 'New call',
+                    onPressed: _openCallPicker,
+                    child: const Icon(Icons.add_call, color: Colors.white),
+                  ),
                 )
               : null),
       drawer: DrawerComponent(

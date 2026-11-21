@@ -141,34 +141,36 @@ class CallScreenState extends State<CallScreen> {
     switch (record.status) {
       case CallStatus.missed:
         return const Icon(
-          Icons.call_missed,
-          color: Color(0xFFE5484D),
+          Icons.call_missed_rounded,
+          color: Color(0xFFEF4444),
           size: 16,
         );
       case CallStatus.declined:
         return const Icon(
-          Icons.call_end,
-          color: Color(0xFFE5484D),
+          Icons.call_end_rounded,
+          color: Color(0xFFEF4444),
           size: 16,
         );
       case CallStatus.cancelled:
         return Icon(
-          Icons.call_made,
+          Icons.call_made_rounded,
           color: scheme.onSurfaceVariant,
           size: 16,
         );
       case CallStatus.completed:
         return Icon(
           record.direction == CallDirection.incoming
-              ? Icons.call_received
-              : Icons.call_made,
-          color: AppColors.primary,
+              ? Icons.call_received_rounded
+              : Icons.call_made_rounded,
+          color: record.direction == CallDirection.incoming
+              ? const Color(0xFF10B981)
+              : scheme.primary,
           size: 16,
         );
       case CallStatus.failed:
         return const Icon(
-          Icons.error_outline,
-          color: Color(0xFFE5484D),
+          Icons.error_outline_rounded,
+          color: Color(0xFFEF4444),
           size: 16,
         );
     }
@@ -199,24 +201,26 @@ class CallScreenState extends State<CallScreen> {
 
     if (_records.isEmpty) {
       return EmptyState(
-        icon: Icons.call_outlined,
+        icon: Icons.phone_in_talk_rounded,
         title: 'No recent calls',
         subtitle:
-            'When you make or receive audio calls, they will appear here.',
+            'Start a crystal-clear audio call with any of your AirMail contacts.',
+        buttonLabel: 'Start a call',
         onPressed: _openContactPicker,
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadHistory,
+      color: scheme.primary,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _records.length,
         separatorBuilder: (_, __) => Divider(
           height: 1,
-          indent: 76,
+          indent: 82,
           endIndent: 16,
-          color: scheme.outlineVariant.withValues(alpha: 0.25),
+          color: scheme.outlineVariant.withValues(alpha: 0.35),
         ),
         itemBuilder: (context, index) {
           final record = _records[index];
@@ -231,7 +235,7 @@ class CallScreenState extends State<CallScreen> {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             leading: AppAvatar(
               name: peerName,
-              size: 48,
+              size: 50,
               online: RealtimeService.instance.isOnline(record.peer.id),
             ),
             title: Text(
@@ -241,21 +245,22 @@ class CallScreenState extends State<CallScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
-                color: isMissed ? const Color(0xFFE5484D) : scheme.onSurface,
+                letterSpacing: -0.2,
+                color: isMissed ? const Color(0xFFEF4444) : scheme.onSurface,
               ),
             ),
             subtitle: Row(
               children: [
                 _buildStatusIcon(record, scheme),
-                const SizedBox(width: 4),
+                const SizedBox(width: 5),
                 Text(
                   _statusLabel(record),
                   style: TextStyle(
                     fontSize: 13,
                     color: isMissed
-                        ? const Color(0xFFE5484D)
+                        ? const Color(0xFFEF4444)
                         : scheme.onSurfaceVariant,
-                    fontWeight: isMissed ? FontWeight.w500 : FontWeight.normal,
+                    fontWeight: isMissed ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
                 Text(
@@ -271,13 +276,23 @@ class CallScreenState extends State<CallScreen> {
                 ),
               ],
             ),
-            trailing: IconButton(
-              tooltip: 'Call $peerName',
-              icon: const Icon(
-                Icons.call_outlined,
-                color: AppColors.primary,
+            trailing: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
               ),
-              onPressed: () => _startCall(record.peer),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: 'Call $peerName',
+                icon: Icon(
+                  Icons.call_rounded,
+                  size: 19,
+                  color: scheme.primary,
+                ),
+                onPressed: () => _startCall(record.peer),
+              ),
             ),
             onTap: () => _startCall(record.peer),
           );

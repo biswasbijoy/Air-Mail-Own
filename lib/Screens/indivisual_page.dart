@@ -218,16 +218,16 @@ class _IndivisualPageState extends State<IndivisualPage> {
     }
 
     if (_messages.isEmpty) {
-      return const EmptyState(
-        icon: Icons.waving_hand_outlined,
-        title: 'Say hi',
-        subtitle: 'Send the first message to start the conversation.',
+      return EmptyState(
+        icon: Icons.waving_hand_rounded,
+        title: 'Say Hello!',
+        subtitle: 'Start the conversation with ${widget.chatModel.name ?? 'your contact'}.',
       );
     }
 
     return ListView.builder(
       reverse: true,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final message = _messages[_messages.length - 1 - index];
@@ -242,9 +242,12 @@ class _IndivisualPageState extends State<IndivisualPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 40,
+        leadingWidth: 44,
+        titleSpacing: 0,
         title: ValueListenableBuilder<Set<String>>(
           valueListenable: RealtimeService.instance.onlineUsers,
           builder: (context, _, __) {
@@ -262,10 +265,10 @@ class _IndivisualPageState extends State<IndivisualPage> {
                   children: [
                     AppAvatar(
                       name: widget.chatModel.name,
-                      size: 38,
+                      size: 40,
                       online: online,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,24 +279,41 @@ class _IndivisualPageState extends State<IndivisualPage> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          Text(
-                            isTyping
-                                ? 'Typing...'
-                                : online
-                                    ? 'Online'
-                                    : 'Offline',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: isTyping ? AppColors.primary : null,
-                                  fontStyle: isTyping
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
+                          const SizedBox(height: 1),
+                          Row(
+                            children: [
+                              if (online && !isTyping)
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.only(right: 5),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
+                              Text(
+                                isTyping
+                                    ? 'typing...'
+                                    : online
+                                        ? 'Active now'
+                                        : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isTyping ? FontWeight.w600 : FontWeight.w400,
+                                  color: isTyping
+                                      ? scheme.primary
+                                      : (online
+                                          ? const Color(0xFF10B981)
+                                          : scheme.onSurfaceVariant),
+                                  fontStyle: isTyping ? FontStyle.italic : FontStyle.normal,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -313,72 +333,109 @@ class _IndivisualPageState extends State<IndivisualPage> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.call_outlined),
+                : Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.primary.withValues(alpha: 0.12),
+                    ),
+                    child: Icon(Icons.call_rounded, size: 20, color: scheme.primary),
+                  ),
             onPressed: _startingCall ? null : _startCall,
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: Column(
         children: [
           Expanded(child: _buildMessageList()),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: SettingsService.instance.enterIsSend ? 1 : 5,
-                      textInputAction: SettingsService.instance.enterIsSend
-                          ? TextInputAction.send
-                          : TextInputAction.newline,
-                      textCapitalization: TextCapitalization.sentences,
-                      onSubmitted: (_) => _send(),
-                      decoration: InputDecoration(
-                        hintText: 'Message',
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: SettingsService.instance.enterIsSend ? 1 : 5,
+                        textInputAction: SettingsService.instance.enterIsSend
+                            ? TextInputAction.send
+                            : TextInputAction.newline,
+                        textCapitalization: TextCapitalization.sentences,
+                        onSubmitted: (_) => _send(),
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(26),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(26),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(26),
+                            borderSide: BorderSide(color: scheme.primary.withValues(alpha: 0.5), width: 1.2),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.onPrimary,
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      onPressed: _sending ? null : _send,
-                      icon: _sending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send_rounded),
+                      child: IconButton(
+                        onPressed: _sending ? null : _send,
+                        icon: _sending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.arrow_upward_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

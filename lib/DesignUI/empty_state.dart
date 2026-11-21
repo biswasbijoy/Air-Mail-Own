@@ -5,6 +5,7 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onPressed;
+  final String? buttonLabel;
 
   const EmptyState({
     super.key,
@@ -12,6 +13,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onPressed,
+    this.buttonLabel,
   });
 
   @override
@@ -19,28 +21,45 @@ class EmptyState extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: scheme.onSurfaceVariant),
-            const SizedBox(height: 16),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.primary.withValues(alpha: 0.12),
+              ),
+              child: Icon(icon, size: 38, color: scheme.primary),
+            ),
+            const SizedBox(height: 20),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+                letterSpacing: -0.2,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: TextStyle(
+                fontSize: 14,
+                color: scheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
             if (onPressed != null) ...[
-              const SizedBox(height: 16),
-              FilledButton.tonal(
+              const SizedBox(height: 20),
+              FilledButton(
                 onPressed: onPressed,
-                child: const Text('Try again'),
+                child: Text(buttonLabel ?? 'Try again'),
               ),
             ],
           ],

@@ -8,7 +8,6 @@ import 'package:airmail/Screens/indivisual_page.dart';
 import 'package:airmail/services/api_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
-import 'package:airmail/theme/app_colors.dart';
 import 'package:airmail/utils/time_format.dart';
 import 'package:flutter/material.dart';
 
@@ -26,14 +25,21 @@ class ChatPage extends StatefulWidget {
 
 class ChatPageState extends State<ChatPage> {
   final List<ChatModel> _chats = [];
+  final TextEditingController _searchController = TextEditingController();
   StreamSubscription<MessageModel>? _messageSubscription;
   bool _loading = true;
   bool _refreshQueued = false;
   String? _error;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
     _messageSubscription =
         RealtimeService.instance.messages.listen((_) => _scheduleRefresh());
     _loadChats(showSpinner: true);
@@ -41,6 +47,7 @@ class ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _messageSubscription?.cancel();
     super.dispose();
   }
@@ -119,8 +126,19 @@ class ChatPageState extends State<ChatPage> {
     refresh();
   }
 
+  List<ChatModel> get _filteredChats {
+    if (_searchQuery.isEmpty) return _chats;
+    return _chats.where((chat) {
+      final name = (chat.name ?? '').toLowerCase();
+      final msg = (chat.currentMessage ?? '').toLowerCase();
+      return name.contains(_searchQuery) || msg.contains(_searchQuery);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     if (_loading && _chats.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -128,7 +146,7 @@ class ChatPageState extends State<ChatPage> {
     if (_error != null && _chats.isEmpty) {
       return RefreshIndicator(
         onRefresh: () => _loadChats(showSpinner: true),
-        color: AppColors.primary,
+        color: scheme.primary,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -149,16 +167,16 @@ class ChatPageState extends State<ChatPage> {
     if (_chats.isEmpty) {
       return RefreshIndicator(
         onRefresh: refresh,
-        color: AppColors.primary,
+        color: scheme.primary,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(
               height: 420,
               child: EmptyState(
-                icon: Icons.chat_bubble_outline,
-                title: 'No chats yet',
-                subtitle: 'Tap the pencil button to start a conversation.',
+                icon: Icons.chat_bubble_outline_rounded,
+                title: 'No conversations yet',
+                subtitle: 'Tap the pencil button to start your first chat on AirMail.',
               ),
             ),
           ],
@@ -166,21 +184,77 @@ class ChatPageState extends State<ChatPage> {
       );
     }
 
+    final filtered = _filteredChats;
+
     return RefreshIndicator(
       onRefresh: refresh,
-      color: AppColors.primary,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemCount: _chats.length,
-        itemBuilder: (context, index) {
-          final chat = _chats[index];
-          return CustomCard(
-            chatModel: chat,
-            onTap: () => _openChat(chat),
-          );
-        },
+      color: scheme.primary,
+      child: Column(
+        children: [
+          // Search box
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search chats & messages...',
+                prefixIcon: Icon(Icons.search, size: 20, color: scheme.onSurfaceVariant),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: scheme.primary, width: 1.2),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: 300,
+                        child: EmptyState(
+                          icon: Icons.search_off_rounded,
+                          title: 'No results found',
+                          subtitle: 'No chats match "$_searchQuery"',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      indent: 82,
+                      endIndent: 16,
+                      color: scheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                    itemBuilder: (context, index) {
+                      final chat = filtered[index];
+                      return CustomCard(
+                        chatModel: chat,
+                        onTap: () => _openChat(chat),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
