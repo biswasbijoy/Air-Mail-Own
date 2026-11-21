@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../Model/call_event.dart';
+import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import '../Model/message_model.dart';
 import 'api_service.dart';
@@ -23,6 +24,8 @@ class RealtimeService {
       StreamController<MessageModel>.broadcast();
   final StreamController<CallEvent> _callEvents =
       StreamController<CallEvent>.broadcast();
+  final StreamController<CallRecordModel> _callHistory =
+      StreamController<CallRecordModel>.broadcast();
   final Map<String, Timer> _typingTimers = <String, Timer>{};
 
   io.Socket? _socket;
@@ -32,6 +35,12 @@ class RealtimeService {
   Stream<MessageModel> get messages => _messages.stream;
 
   Stream<CallEvent> get callEvents => _callEvents.stream;
+
+  Stream<CallRecordModel> get callHistory => _callHistory.stream;
+
+  void notifyCallHistory(CallRecordModel record) {
+    _callHistory.add(record);
+  }
 
   bool get hasPresence => _hasPresence;
 
@@ -262,6 +271,15 @@ class RealtimeService {
 
     socket.on('webrtc_signal', (data) {
       _handleCallSocketEvent('webrtc_signal', data);
+    });
+
+    socket.on('call_history_item', (data) {
+      if (data is! Map) return;
+      try {
+        final record =
+            CallRecordModel.fromJson(Map<String, dynamic>.from(data));
+        _callHistory.add(record);
+      } catch (_) {}
     });
 
     socket.on('new_message', (data) {

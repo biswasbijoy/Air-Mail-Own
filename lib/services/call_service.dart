@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../Model/call_event.dart';
+import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import 'api_service.dart';
+import 'call_history_store.dart';
 import 'realtime_service.dart';
 
 enum CallState { idle, outgoing, incoming, connecting, active }
@@ -47,6 +49,7 @@ class CallService extends ChangeNotifier {
   CallState _state = CallState.idle;
   ChatModel? _peer;
   String? _callId;
+  String? currentUserId;
   bool _isCaller = false;
   bool _starting = false;
   bool _muted = false;
@@ -569,6 +572,48 @@ class CallService extends ChangeNotifier {
 
   Future<void> _teardown({bool notify = true}) async {
     _cancelRingTimeout();
+
+    final peer = _peer;
+    final callId = _callId;
+    final isCaller = _isCaller;
+    final connectedAt = _connectedAt;
+    final endReason = _lastEndReason;
+    final error = _lastError;
+    final userId = currentUserId;
+
+    if (peer != null && callId != null && callId.isNotEmpty) {
+      final CallStatus status;
+      if (connectedAt != null) {
+        status = CallStatus.completed;
+      } else if (endReason == 'Call declined' || endReason == 'Declined') {
+        status = CallStatus.declined;
+      } else if (endReason == 'No answer') {
+        status = CallStatus.missed;
+      } else if (endReason == 'Call cancelled') {
+        status = isCaller ? CallStatus.cancelled : CallStatus.missed;
+      } else if (error != null && error.isNotEmpty) {
+        status = CallStatus.failed;
+      } else {
+        status = isCaller ? CallStatus.cancelled : CallStatus.missed;
+      }
+
+      final duration = connectedAt != null
+          ? DateTime.now().difference(connectedAt).inSeconds
+          : 0;
+
+      final record = CallRecordModel(
+        id: callId,
+        peer: peer,
+        direction: isCaller ? CallDirection.outgoing : CallDirection.incoming,
+        status: status,
+        duration: duration,
+        createdAt: DateTime.now(),
+      );
+
+      unawaited(CallHistoryStore.addRecord(userId, record));
+      RealtimeService.instance.notifyCallHistory(record);
+    }
+
     _callId = null;
     _isCaller = false;
     _state = CallState.idle;

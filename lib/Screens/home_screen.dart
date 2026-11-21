@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ChatPageState> _chatPageKey = GlobalKey<ChatPageState>();
+  final GlobalKey<CallScreenState> _callScreenKey = GlobalKey<CallScreenState>();
   late final List<Widget> _pages;
   int _selectedIndex = 0;
   bool _callPageOpen = false;
@@ -29,12 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     RealtimeService.instance.connect(widget.session);
+    CallService.instance.currentUserId = widget.session.userId;
     CallService.instance.attach();
     CallService.instance.addListener(_handleCallStateChanged);
     _pages = [
       ChatPage(key: _chatPageKey, session: widget.session),
       SelectContact(session: widget.session),
-      const CallScreen(),
+      CallScreen(key: _callScreenKey, session: widget.session),
       const GameScreen(),
     ];
   }
@@ -57,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final route = MaterialPageRoute<void>(builder: (_) => const CallPage());
     Navigator.of(context).push(route).whenComplete(() {
       _callPageOpen = false;
+      _callScreenKey.currentState?.refresh();
       final nextState = CallService.instance.state;
       if (nextState == CallState.outgoing || nextState == CallState.incoming) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     _chatPageKey.currentState?.refresh();
+    _callScreenKey.currentState?.refresh();
   }
 
   void _onDestinationSelected(int index) {
@@ -90,6 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _selectedIndex = index);
     if (index == 0 && previous != 0) {
       _chatPageKey.currentState?.refresh();
+    } else if (index == 2 && previous != 2) {
+      _callScreenKey.currentState?.refresh();
     }
   }
 
@@ -172,7 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _openContactPicker,
               child: const Icon(Icons.edit_outlined),
             )
-          : null,
+          : (_selectedIndex == 2
+              ? FloatingActionButton(
+                  tooltip: 'New call',
+                  onPressed: _openContactPicker,
+                  child: const Icon(Icons.add_call),
+                )
+              : null),
       drawer: DrawerComponent(
         session: widget.session,
         onLogout: _logout,

@@ -95,6 +95,28 @@ const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Contact = mongoose.model('Contact', contactSchema);
 
+const callSchema = new mongoose.Schema(
+  {
+    callId: { type: String, required: true, index: true },
+    caller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    callType: { type: String, default: 'audio' },
+    status: {
+      type: String,
+      enum: ['completed', 'missed', 'declined', 'cancelled', 'failed'],
+      default: 'completed',
+    },
+    duration: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now, index: true },
+  },
+  { versionKey: false }
+);
+
+callSchema.index({ caller: 1, createdAt: -1 });
+callSchema.index({ receiver: 1, createdAt: -1 });
+
+const CallRecord = mongoose.model('CallRecord', callSchema);
+
 const onlineSockets = new Map();
 const activeCalls = new Map();
 const userCalls = new Map();
@@ -185,6 +207,8 @@ function endActiveCall(callId, reason, exceptUserId = null) {
   const call = clearCall(callId);
   if (!call) return;
 
+  recordCallHistory(call, reason);
+
   if (exceptUserId) {
     const otherId = callOtherUserId(call, exceptUserId);
     if (otherId) {
@@ -199,6 +223,64 @@ function endActiveCall(callId, reason, exceptUserId = null) {
   io.to(`user:${call.callerId}`)
     .to(`user:${call.receiverId}`)
     .emit('call_ended', { callId, reason });
+}
+
+async function recordCallHistory(call, reason) {
+  try {
+    let status = 'failed';
+    let duration = 0;
+    if (call.acceptedAt) {
+      status = 'completed';
+      duration = Math.max(0, Math.round((new Date() - call.acceptedAt) / 1000));
+    } else if (reason === 'Declined' || reason === 'Call declined') {
+      status = 'declined';
+    } else if (reason === 'No answer') {
+      status = 'missed';
+    } else if (reason === 'Call cancelled') {
+      status = 'cancelled';
+    }
+
+    const record = await CallRecord.create({
+      callId: call.callId,
+      caller: call.callerId,
+      receiver: call.receiverId,
+      callType: call.callType || 'audio',
+      status,
+      duration,
+      createdAt: call.createdAt || new Date(),
+    });
+
+    const [caller, receiver] = await Promise.all([
+      User.findById(call.callerId).select(PUBLIC_USER_FIELDS).lean(),
+      User.findById(call.receiverId).select(PUBLIC_USER_FIELDS).lean(),
+    ]);
+
+    if (caller && receiver) {
+      io.to(`user:${call.callerId}`).emit('call_history_item', {
+        id: record._id.toString(),
+        callId: call.callId,
+        peer: publicUser(receiver),
+        direction: 'outgoing',
+        status,
+        duration,
+        createdAt: record.createdAt.toISOString(),
+      });
+
+      const receiverStatus =
+        !call.acceptedAt && status === 'cancelled' ? 'missed' : status;
+      io.to(`user:${call.receiverId}`).emit('call_history_item', {
+        id: record._id.toString(),
+        callId: call.callId,
+        peer: publicUser(caller),
+        direction: 'incoming',
+        status: receiverStatus,
+        duration,
+        createdAt: record.createdAt.toISOString(),
+      });
+    }
+  } catch (err) {
+    console.error('Error saving call record:', err.message);
+  }
 }
 
 function armCallTimeout(call) {
@@ -684,6 +766,61 @@ app.get('/api/messages/:userId', apiLimiter, auth, async (req, res) => {
     return res.json(messages.map(serializeMessage));
   } catch (err) {
     console.error('Messages error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/calls', apiLimiter, auth, async (req, res) => {
+  try {
+    const records = await CallRecord.find({
+      $or: [{ caller: req.userId }, { receiver: req.userId }],
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .populate('caller', PUBLIC_USER_FIELDS)
+      .populate('receiver', PUBLIC_USER_FIELDS)
+      .lean();
+
+    const formatted = records.map((record) => {
+      const isCaller =
+        record.caller &&
+        record.caller._id.toString() === req.userId.toString();
+      const peer = isCaller ? record.receiver : record.caller;
+      let status = record.status;
+      if (!isCaller && status === 'cancelled') {
+        status = 'missed';
+      }
+
+      return {
+        id: record._id.toString(),
+        callId: record.callId,
+        peer: peer
+          ? publicUser(peer)
+          : { id: '', name: 'Unknown User', email: '', online: false },
+        direction: isCaller ? 'outgoing' : 'incoming',
+        status,
+        duration: record.duration || 0,
+        createdAt: record.createdAt
+          ? record.createdAt.toISOString()
+          : new Date().toISOString(),
+      };
+    });
+
+    return res.json(formatted);
+  } catch (err) {
+    console.error('Call history error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.delete('/api/calls', apiLimiter, auth, async (req, res) => {
+  try {
+    await CallRecord.deleteMany({
+      $or: [{ caller: req.userId }, { receiver: req.userId }],
+    });
+    return res.json({ cleared: true });
+  } catch (err) {
+    console.error('Clear call history error:', err.message);
     return res.status(500).json({ message: 'Server error' });
   }
 });

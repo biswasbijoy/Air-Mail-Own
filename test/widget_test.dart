@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:airmail/Model/call_event.dart';
+import 'package:airmail/Model/call_record_model.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/Screens/login_screen.dart';
 import 'package:airmail/main.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/call_history_store.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/theme/theme_controller.dart';
@@ -299,5 +301,79 @@ void main() {
 
     final servers = await ApiService.fetchIceServers(client: mockClient);
     expect(servers, isNull);
+  });
+
+  test('CallRecordModel parses json and serializes correctly', () {
+    final json = {
+      'id': 'call-rec-1',
+      'peer': {
+        'id': 'peer-1',
+        'name': 'Alice',
+        'email': 'alice@example.com',
+        'online': true,
+      },
+      'direction': 'incoming',
+      'status': 'completed',
+      'duration': 42,
+      'createdAt': '2026-03-30T10:00:00.000Z',
+    };
+
+    final record = CallRecordModel.fromJson(json);
+    expect(record.id, 'call-rec-1');
+    expect(record.peer.id, 'peer-1');
+    expect(record.peer.name, 'Alice');
+    expect(record.direction, CallDirection.incoming);
+    expect(record.status, CallStatus.completed);
+    expect(record.duration, 42);
+
+    final serialized = record.toJson();
+    expect(serialized['id'], 'call-rec-1');
+    expect(serialized['direction'], 'incoming');
+    expect(serialized['status'], 'completed');
+    expect(serialized['duration'], 42);
+  });
+
+  test('CallHistoryStore saves, loads, and manages records per user', () async {
+    const userId = 'user-call-store-test';
+    final record1 = CallRecordModel(
+      id: 'call-1',
+      peer: ChatModel(
+        id: 'peer-1',
+        name: 'Bob',
+        email: 'bob@example.com',
+        status: 'online',
+      ),
+      direction: CallDirection.outgoing,
+      status: CallStatus.missed,
+      duration: 0,
+      createdAt: DateTime.now(),
+    );
+
+    final record2 = CallRecordModel(
+      id: 'call-2',
+      peer: ChatModel(
+        id: 'peer-2',
+        name: 'Charlie',
+        email: 'charlie@example.com',
+        status: 'offline',
+      ),
+      direction: CallDirection.incoming,
+      status: CallStatus.completed,
+      duration: 120,
+      createdAt: DateTime.now(),
+    );
+
+    await CallHistoryStore.addRecord(userId, record1);
+    await CallHistoryStore.addRecord(userId, record2);
+
+    final loaded = await CallHistoryStore.load(userId);
+    expect(loaded.length, 2);
+    // Most recent saved should be first
+    expect(loaded.first.id, 'call-2');
+    expect(loaded.last.id, 'call-1');
+
+    await CallHistoryStore.clear(userId);
+    final cleared = await CallHistoryStore.load(userId);
+    expect(cleared, isEmpty);
   });
 }

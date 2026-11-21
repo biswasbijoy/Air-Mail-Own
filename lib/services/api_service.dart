@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import '../Model/message_model.dart';
 import 'session.dart';
@@ -198,6 +199,21 @@ class ApiService {
       throw const ApiException('Unexpected server response');
     }
     return MessageModel.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  Future<List<CallRecordModel>> fetchCallHistory() async {
+    final data = await _get('/api/calls');
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((item) =>
+            CallRecordModel.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  Future<bool> clearCallHistory() async {
+    final data = await _delete('/api/calls');
+    return data is Map && data['cleared'] == true;
   }
 
   Map<String, String> get _headers => {
