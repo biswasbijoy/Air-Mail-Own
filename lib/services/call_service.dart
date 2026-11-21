@@ -8,6 +8,7 @@ import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import 'api_service.dart';
 import 'call_history_store.dart';
+import 'notification_sound_service.dart';
 import 'realtime_service.dart';
 
 enum CallState { idle, outgoing, incoming, connecting, active }
@@ -67,6 +68,7 @@ class CallService extends ChangeNotifier {
   Future<void> _signalQueue = Future<void>.value();
 
   Timer? _ringTimeout;
+  Timer? _activeNotificationTimer;
   StreamSubscription<CallEvent>? _callSubscription;
   bool _attached = false;
 
@@ -167,6 +169,11 @@ class CallService extends ChangeNotifier {
       _callId = callId;
       _state = CallState.outgoing;
       _armRingTimeout();
+      unawaited(NotificationSoundService.instance.startOutgoingRingback());
+      unawaited(NotificationSoundService.instance.showActiveCallNotification(
+        peerName: peer.name ?? 'AirMail User',
+        durationText: 'Calling...',
+      ));
       return true;
     } catch (error) {
       _lastError = _messageFor(error);
@@ -183,6 +190,11 @@ class CallService extends ChangeNotifier {
     if (_state != CallState.incoming || callId == null) return false;
 
     _state = CallState.connecting;
+    NotificationSoundService.instance.stopAllSounds();
+    unawaited(NotificationSoundService.instance.showActiveCallNotification(
+      peerName: _peer?.name ?? 'AirMail User',
+      durationText: 'Connecting...',
+    ));
     notifyListeners();
 
     try {
@@ -205,6 +217,8 @@ class CallService extends ChangeNotifier {
   }
 
   Future<void> declineCall() async {
+    NotificationSoundService.instance.stopAllSounds();
+    unawaited(NotificationSoundService.instance.cancelCallNotification());
     final callId = _callId;
     if (_state != CallState.incoming || callId == null) return;
 
@@ -301,6 +315,37 @@ class CallService extends ChangeNotifier {
     });
   }
 
+  void _transitionToActive() {
+    NotificationSoundService.instance.stopAllSounds();
+    _startActiveCallNotificationTimer();
+    _state = CallState.active;
+    notifyListeners();
+  }
+
+  void _startActiveCallNotificationTimer() {
+    _activeNotificationTimer?.cancel();
+    _activeNotificationTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (_state != CallState.active) {
+        _stopActiveCallNotificationTimer();
+        return;
+      }
+      final duration = _connectedAt != null
+          ? DateTime.now().difference(_connectedAt!)
+          : Duration.zero;
+      final m = duration.inMinutes.toString().padLeft(2, '0');
+      final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
+      NotificationSoundService.instance.showActiveCallNotification(
+        peerName: _peer?.name ?? 'AirMail User',
+        durationText: '$m:$s',
+      );
+    });
+  }
+
+  void _stopActiveCallNotificationTimer() {
+    _activeNotificationTimer?.cancel();
+    _activeNotificationTimer = null;
+  }
+
   void _handleIceConnectionState(RTCIceConnectionState iceState) {
     debugPrint('WebRTC ICE state: $iceState');
     switch (iceState) {
@@ -310,8 +355,7 @@ class CallService extends ChangeNotifier {
         _cancelRingTimeout();
         _connectedAt ??= DateTime.now();
         if (_state == CallState.connecting) {
-          _state = CallState.active;
-          notifyListeners();
+          _transitionToActive();
         }
         break;
       case RTCIceConnectionState.RTCIceConnectionStateFailed:
@@ -331,8 +375,7 @@ class CallService extends ChangeNotifier {
         _cancelRingTimeout();
         _connectedAt ??= DateTime.now();
         if (_state == CallState.connecting) {
-          _state = CallState.active;
-          notifyListeners();
+          _transitionToActive();
         }
         break;
       case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
@@ -380,6 +423,10 @@ class CallService extends ChangeNotifier {
     _muted = false;
     _speakerOn = false;
     _armRingTimeout();
+    unawaited(NotificationSoundService.instance.startIncomingRingtone());
+    unawaited(NotificationSoundService.instance.showIncomingCallNotification(
+      callerName: caller?.name ?? 'AirMail User',
+    ));
     notifyListeners();
   }
 
@@ -388,7 +435,12 @@ class CallService extends ChangeNotifier {
     if (_state != CallState.outgoing) return;
 
     _cancelRingTimeout();
+    NotificationSoundService.instance.stopAllSounds();
     _state = CallState.connecting;
+    unawaited(NotificationSoundService.instance.showActiveCallNotification(
+      peerName: _peer?.name ?? 'AirMail User',
+      durationText: 'Connecting...',
+    ));
     notifyListeners();
 
     try {
@@ -572,6 +624,9 @@ class CallService extends ChangeNotifier {
 
   Future<void> _teardown({bool notify = true}) async {
     _cancelRingTimeout();
+    _stopActiveCallNotificationTimer();
+    NotificationSoundService.instance.stopAllSounds();
+    unawaited(NotificationSoundService.instance.cancelCallNotification());
 
     final peer = _peer;
     final callId = _callId;

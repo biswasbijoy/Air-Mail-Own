@@ -20,7 +20,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final GlobalKey<ChatPageState> _chatPageKey = GlobalKey<ChatPageState>();
   final GlobalKey<CallScreenState> _callScreenKey = GlobalKey<CallScreenState>();
   late final List<Widget> _pages;
@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     RealtimeService.instance.connect(widget.session);
     CallService.instance.currentUserId = widget.session.userId;
     CallService.instance.attach();
@@ -44,10 +45,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     CallService.instance.removeListener(_handleCallStateChanged);
     CallService.instance.detach();
     RealtimeService.instance.disconnect();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      RealtimeService.instance.reconnectIfNeeded();
+      _chatPageKey.currentState?.refresh();
+      _callScreenKey.currentState?.refresh();
+    }
   }
 
   void _handleCallStateChanged() {
@@ -126,6 +137,148 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildActiveCallBanner(BuildContext context) {
+    return ListenableBuilder(
+      listenable: CallService.instance,
+      builder: (context, _) {
+        final call = CallService.instance;
+        if (call.state == CallState.idle) {
+          return const SizedBox.shrink();
+        }
+
+        final peerName = call.peer?.name ?? 'AirMail Call';
+        final isIncoming = call.state == CallState.incoming;
+
+        String subtitle;
+        if (call.state == CallState.active) {
+          final start = call.connectedAt;
+          final duration = start != null
+              ? DateTime.now().difference(start)
+              : Duration.zero;
+          final m = duration.inMinutes.toString().padLeft(2, '0');
+          final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
+          subtitle = 'Connected • $m:$s (Tap to expand)';
+        } else if (call.state == CallState.connecting) {
+          subtitle = 'Connecting... (Tap to expand)';
+        } else if (call.state == CallState.outgoing) {
+          subtitle = 'Calling... (Tap to expand)';
+        } else {
+          subtitle = 'Incoming call (Tap to answer)';
+        }
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+            border: Border.all(
+              color: const Color(0xFF10B981).withValues(alpha: 0.5),
+              width: 1.2,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CallPage()),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.phone_in_talk_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            peerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (isIncoming) ...[
+                      IconButton(
+                        tooltip: 'Decline',
+                        icon: const Icon(Icons.call_end_rounded, color: Color(0xFFEF4444)),
+                        onPressed: () => call.declineCall(),
+                      ),
+                      IconButton(
+                        tooltip: 'Accept',
+                        icon: const Icon(Icons.call_rounded, color: Color(0xFF10B981)),
+                        onPressed: () => call.acceptCall(),
+                      ),
+                    ] else ...[
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          tooltip: 'End call',
+                          icon: const Icon(Icons.call_end_rounded, color: Colors.white, size: 20),
+                          onPressed: () => call.endCall(),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -170,7 +323,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: _pages[_selectedIndex],
+      body: Column(
+        children: [
+          Expanded(child: _pages[_selectedIndex]),
+          _buildActiveCallBanner(context),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(

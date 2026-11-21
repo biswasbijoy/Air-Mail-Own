@@ -8,6 +8,7 @@ import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import '../Model/message_model.dart';
 import 'api_service.dart';
+import 'notification_sound_service.dart';
 import 'profile_store.dart';
 import 'session.dart';
 
@@ -31,7 +32,9 @@ class RealtimeService {
 
   io.Socket? _socket;
   String? _token;
+  String? currentUserId;
   bool _hasPresence = false;
+  Timer? _reconnectTimer;
 
   Stream<MessageModel> get messages => _messages.stream;
 
@@ -203,15 +206,27 @@ class RealtimeService {
 
     disconnect();
     _token = session.token;
+    currentUserId = session.userId;
 
     final socket = io.io(
       ApiService.baseUrl,
       io.OptionBuilder()
           .setTransports(['websocket', 'polling'])
-          .disableAutoConnect()
+          .enableAutoConnect()
+          .enableReconnection()
+          .setReconnectionAttempts(999999)
+          .setReconnectionDelay(1000)
+          .setReconnectionDelayMax(4000)
           .setAuth({'token': session.token})
           .build(),
     );
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (_token != null && _socket != null && !_socket!.connected) {
+        _socket!.connect();
+      }
+    });
 
     socket.on('presence_state', (data) {
       if (data is! Map) return;
@@ -305,12 +320,19 @@ class RealtimeService {
       final message = MessageModel.fromJson(Map<String, dynamic>.from(data));
       _stopTypingFor(message.senderId);
       _messages.add(message);
+
+      if (currentUserId != null && message.senderId != currentUserId) {
+        unawaited(NotificationSoundService.instance.playMessageChime());
+        unawaited(NotificationSoundService.instance.showMessageNotification(
+          senderName: 'New message',
+          message: message.message,
+          senderId: message.senderId,
+        ));
+      }
     });
 
     socket.onDisconnect((_) {
       connected.value = false;
-      _hasPresence = true;
-      onlineUsers.value = <String>{};
       _clearTyping();
     });
 
@@ -323,11 +345,21 @@ class RealtimeService {
     socket.connect();
   }
 
+  void reconnectIfNeeded() {
+    final socket = _socket;
+    if (socket != null && !socket.connected) {
+      socket.connect();
+    }
+  }
+
   void disconnect() {
     connected.value = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _socket?.dispose();
     _socket = null;
     _token = null;
+    currentUserId = null;
     _hasPresence = false;
     onlineUsers.value = <String>{};
     _clearTyping();

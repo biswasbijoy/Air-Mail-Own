@@ -101,11 +101,9 @@ class _CallPageState extends State<CallPage> {
     final isIncoming = _calls.state == CallState.incoming;
 
     return PopScope(
-      canPop: _calls.state == CallState.idle,
+      canPop: true,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _calls.state != CallState.idle) {
-          unawaited(_calls.endCall());
-        }
+        // Minimizing or pressing back keeps the call running in the background.
       },
       child: Scaffold(
         body: Container(
@@ -128,15 +126,20 @@ class _CallPageState extends State<CallPage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      tooltip: isIncoming ? 'Decline' : 'End call',
+                      tooltip: isIncoming ? 'Decline' : 'Minimize call',
                       onPressed: () {
                         if (isIncoming) {
                           unawaited(_calls.declineCall());
                         } else {
-                          unawaited(_calls.endCall());
+                          Navigator.of(context).maybePop();
                         }
                       },
-                      icon: const Icon(Icons.close),
+                      icon: Icon(
+                        isIncoming
+                            ? Icons.close
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 32,
+                      ),
                     ),
                   ),
                   const Spacer(),

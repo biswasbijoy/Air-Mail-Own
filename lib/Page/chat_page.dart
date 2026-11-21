@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:airmail/DesignUI/custom_card.dart';
 import 'package:airmail/DesignUI/empty_state.dart';
+import 'package:airmail/Model/call_record_model.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/Screens/indivisual_page.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/call_history_store.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/utils/time_format.dart';
@@ -27,6 +29,7 @@ class ChatPageState extends State<ChatPage> {
   final List<ChatModel> _chats = [];
   final TextEditingController _searchController = TextEditingController();
   StreamSubscription<MessageModel>? _messageSubscription;
+  StreamSubscription<CallRecordModel>? _callSubscription;
   bool _loading = true;
   bool _refreshQueued = false;
   String? _error;
@@ -41,7 +44,9 @@ class ChatPageState extends State<ChatPage> {
       });
     });
     _messageSubscription =
-        RealtimeService.instance.messages.listen((_) => _scheduleRefresh());
+        RealtimeService.instance.messages.listen(_handleRealtimeMessage);
+    _callSubscription =
+        RealtimeService.instance.callHistory.listen(_handleRealtimeCall);
     _loadChats(showSpinner: true);
   }
 
@@ -49,7 +54,87 @@ class ChatPageState extends State<ChatPage> {
   void dispose() {
     _searchController.dispose();
     _messageSubscription?.cancel();
+    _callSubscription?.cancel();
     super.dispose();
+  }
+
+  void _handleRealtimeMessage(MessageModel message) {
+    final otherId = message.senderId == widget.session.userId
+        ? message.receiverId
+        : message.senderId;
+
+    final existingIndex = _chats.indexWhere((c) => c.id == otherId);
+    if (existingIndex != -1) {
+      final chat = _chats[existingIndex];
+      chat.currentMessage = message.message;
+      chat.lastMessageAt = message.createdAt;
+      chat.time = formatTimestamp(message.createdAt);
+      if (message.senderId == otherId) {
+        chat.unreadCount = (chat.unreadCount ?? 0) + 1;
+      }
+      _chats.removeAt(existingIndex);
+      _chats.insert(0, chat);
+      if (mounted) setState(() {});
+    } else {
+      _scheduleRefresh();
+    }
+  }
+
+  void _handleRealtimeCall(CallRecordModel record) {
+    final otherId = record.peer.id;
+    if (otherId == null) return;
+
+    final summary = _formatCallSummary(record);
+    final existingIndex = _chats.indexWhere(
+      (c) => c.id == otherId || (c.email != null && c.email == record.peer.email),
+    );
+
+    if (existingIndex != -1) {
+      final chat = _chats[existingIndex];
+      chat.currentMessage = summary;
+      chat.lastMessageAt = record.createdAt;
+      chat.time = formatTimestamp(record.createdAt);
+      _chats.removeAt(existingIndex);
+      _chats.insert(0, chat);
+      if (mounted) setState(() {});
+    } else {
+      final newChat = ChatModel(
+        id: record.peer.id,
+        name: record.peer.name,
+        email: record.peer.email,
+        avatar: record.peer.avatar,
+        currentMessage: summary,
+        lastMessageAt: record.createdAt,
+        time: formatTimestamp(record.createdAt),
+      );
+      _chats.insert(0, newChat);
+      if (mounted) setState(() {});
+    }
+  }
+
+  String _formatCallSummary(CallRecordModel record) {
+    final isOutgoing = record.direction == CallDirection.outgoing;
+    final isMissed = record.status == CallStatus.missed;
+    final isDeclined = record.status == CallStatus.declined;
+    final isCancelled = record.status == CallStatus.cancelled;
+
+    if (isMissed) {
+      return isOutgoing ? '📞 Cancelled call' : '📞 Missed audio call';
+    } else if (isDeclined) {
+      return '📞 Declined call';
+    } else if (isCancelled) {
+      return '📞 Cancelled call';
+    } else {
+      return record.duration > 0
+          ? '📞 Audio call (${_formatDuration(record.duration)})'
+          : '📞 Audio call';
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return s > 0 ? '${m}m ${s}s' : '${m}m';
   }
 
   void _scheduleRefresh() {
@@ -73,7 +158,52 @@ class ChatPageState extends State<ChatPage> {
 
     try {
       final chats = await ApiService(token: widget.session.token).fetchChats();
+      final cachedCalls = await CallHistoryStore.load(widget.session.userId);
       if (!mounted) return;
+
+      final Map<String, CallRecordModel> latestCalls = {};
+      for (final call in cachedCalls) {
+        final key = call.peer.id ?? call.peer.email;
+        if (key == null || key.isEmpty) continue;
+        final existing = latestCalls[key];
+        if (existing == null || call.createdAt.isAfter(existing.createdAt)) {
+          latestCalls[key] = call;
+        }
+      }
+
+      final existingChatKeys = <String>{};
+      for (final chat in chats) {
+        final idKey = chat.id;
+        final emailKey = chat.email;
+        if (idKey != null) existingChatKeys.add(idKey);
+        if (emailKey != null) existingChatKeys.add(emailKey);
+
+        final call = (idKey != null ? latestCalls[idKey] : null) ??
+            (emailKey != null ? latestCalls[emailKey] : null);
+
+        if (call != null) {
+          final msgTime = chat.lastMessageAt;
+          if (msgTime == null || call.createdAt.isAfter(msgTime)) {
+            chat.currentMessage = _formatCallSummary(call);
+            chat.lastMessageAt = call.createdAt;
+          }
+        }
+      }
+
+      for (final entry in latestCalls.entries) {
+        if (!existingChatKeys.contains(entry.key)) {
+          final call = entry.value;
+          chats.add(ChatModel(
+            id: call.peer.id,
+            name: call.peer.name,
+            email: call.peer.email,
+            avatar: call.peer.avatar,
+            currentMessage: _formatCallSummary(call),
+            lastMessageAt: call.createdAt,
+          ));
+          existingChatKeys.add(entry.key);
+        }
+      }
 
       chats.sort((a, b) {
         final aTime = a.lastMessageAt;

@@ -120,6 +120,8 @@ callSchema.index({ receiver: 1, createdAt: -1 });
 const CallRecord = mongoose.model('CallRecord', callSchema);
 
 const onlineSockets = new Map();
+const pendingDisconnects = new Map();
+const DISCONNECT_GRACE_PERIOD_MS = 60000;
 const activeCalls = new Map();
 const userCalls = new Map();
 const CALL_RING_TIMEOUT_MS =
@@ -936,6 +938,12 @@ io.on('connection', (socket) => {
   const userId = socket.userId.toString();
   socket.join(`user:${userId}`);
 
+  const pending = pendingDisconnects.get(userId);
+  if (pending) {
+    clearTimeout(pending);
+    pendingDisconnects.delete(userId);
+  }
+
   const firstConnection = !onlineSockets.has(userId);
   if (firstConnection) onlineSockets.set(userId, new Set());
   onlineSockets.get(userId).add(socket.id);
@@ -947,18 +955,32 @@ io.on('connection', (socket) => {
     sockets.delete(socket.id);
     if (sockets.size > 0) return;
 
-    onlineSockets.delete(userId);
-
-    const callId = userCalls.get(userId);
-    if (callId) {
-      endActiveCall(callId, 'Connection lost', userId);
+    if (pendingDisconnects.has(userId)) {
+      clearTimeout(pendingDisconnects.get(userId));
     }
 
-    try {
-      await broadcastPresence(userId, false);
-    } catch (err) {
-      console.error('Presence broadcast error:', err.message);
-    }
+    const timer = setTimeout(async () => {
+      pendingDisconnects.delete(userId);
+      const activeUserSockets = onlineSockets.get(userId);
+      if (activeUserSockets && activeUserSockets.size > 0) {
+        return;
+      }
+
+      onlineSockets.delete(userId);
+
+      const callId = userCalls.get(userId);
+      if (callId) {
+        endActiveCall(callId, 'Connection lost', userId);
+      }
+
+      try {
+        await broadcastPresence(userId, false);
+      } catch (err) {
+        console.error('Presence broadcast error:', err.message);
+      }
+    }, DISCONNECT_GRACE_PERIOD_MS);
+
+    pendingDisconnects.set(userId, timer);
   });
 
   socket.on('typing', (payload) => {

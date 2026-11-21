@@ -15,6 +15,7 @@ import 'package:airmail/Screens/settings_screen.dart';
 import 'package:airmail/main.dart';
 import 'package:airmail/services/api_service.dart';
 import 'package:airmail/services/call_history_store.dart';
+import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/saved_messages_store.dart';
 import 'package:airmail/services/session.dart';
@@ -707,5 +708,13 @@ void main() {
 
     await store.clear(userId);
     expect(store.messages, isEmpty);
+  });
+
+  test('CallService has initial idle state and supports audio call states', () {
+    final calls = CallService.instance;
+    expect(calls.state, CallState.idle);
+    expect(calls.isBusy, isFalse);
+    expect(calls.muted, isFalse);
+    expect(calls.speakerOn, isFalse);
   });
 }
