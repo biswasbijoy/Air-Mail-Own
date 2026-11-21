@@ -27,7 +27,8 @@ const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(cors({ origin: CORS_ORIGIN }));
-app.use(express.json({ limit: '64kb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
@@ -60,6 +61,7 @@ const userSchema = new mongoose.Schema(
       maxlength: 254,
     },
     password: { type: String, required: true },
+    avatar: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false }
@@ -124,13 +126,14 @@ const CALL_RING_TIMEOUT_MS =
   Number(process.env.CALL_RING_TIMEOUT_MS) || 45000;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PUBLIC_USER_FIELDS = 'name email createdAt';
+const PUBLIC_USER_FIELDS = 'name email avatar createdAt';
 
 function publicUser(user) {
   return {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
+    avatar: user.avatar || '',
     online: onlineSockets.has(user._id.toString()),
   };
 }
@@ -526,6 +529,68 @@ app.get('/api/auth/me', auth, async (req, res) => {
   }
 });
 
+app.post('/api/users/profile', apiLimiter, auth, async (req, res) => {
+  const avatar = typeof req.body.avatar === 'string' ? req.body.avatar : '';
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { avatar },
+      { new: true }
+    ).select(PUBLIC_USER_FIELDS);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const payload = {
+      userId: req.userId.toString(),
+      avatar: user.avatar || '',
+    };
+
+    const related = await getRelatedUserIds(req.userId);
+    for (const rId of related) {
+      io.to(`user:${rId}`).emit('profile_updated', payload);
+    }
+    io.to(`user:${req.userId.toString()}`).emit('profile_updated', payload);
+
+    return res.json({ ok: true, user: publicUser(user) });
+  } catch (err) {
+    console.error('Update profile error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/users/profile', apiLimiter, auth, async (req, res) => {
+  const avatar = typeof req.body.avatar === 'string' ? req.body.avatar : '';
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { avatar },
+      { new: true }
+    ).select(PUBLIC_USER_FIELDS);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const payload = {
+      userId: req.userId.toString(),
+      avatar: user.avatar || '',
+    };
+
+    const related = await getRelatedUserIds(req.userId);
+    for (const rId of related) {
+      io.to(`user:${rId}`).emit('profile_updated', payload);
+    }
+    io.to(`user:${req.userId.toString()}`).emit('profile_updated', payload);
+
+    return res.json({ ok: true, user: publicUser(user) });
+  } catch (err) {
+    console.error('Update profile error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 async function listContacts(req, res) {
   try {
     const docs = await Contact.find({ owner: req.userId })
@@ -906,6 +971,34 @@ io.on('connection', (socket) => {
     io.to(`user:${receiverId}`).emit('typing', {
       userId,
       typing: body.typing === true,
+    });
+  });
+
+  socket.on('profile_update', async (payload) => {
+    try {
+      const avatar = payload && typeof payload.avatar === 'string' ? payload.avatar : '';
+      await User.findByIdAndUpdate(socket.userId, { avatar });
+      const updateData = {
+        userId: socket.userId.toString(),
+        avatar,
+      };
+      const related = await getRelatedUserIds(socket.userId);
+      for (const rId of related) {
+        io.to(`user:${rId}`).emit('profile_updated', updateData);
+      }
+      io.to(`user:${socket.userId.toString()}`).emit('profile_updated', updateData);
+    } catch (e) {
+      console.error('profile_update error:', e.message);
+    }
+  });
+
+  socket.on('peer_profile_sync', (payload) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const receiverId = body.receiverId;
+    if (!receiverId || receiverId === userId) return;
+    io.to(`user:${receiverId}`).emit('profile_updated', {
+      userId,
+      avatar: typeof body.avatar === 'string' ? body.avatar : '',
     });
   });
 

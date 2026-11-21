@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final base64String = base64Encode(bytes);
       await ProfileStore.instance.setAvatar(widget.session.userId, base64String);
       RealtimeService.instance.broadcastProfileUpdate(widget.session.userId, base64String);
+      unawaited(ApiService(token: widget.session.token).updateProfile(avatar: base64String));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,6 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).pop();
     await ProfileStore.instance.setAvatar(widget.session.userId, null);
     RealtimeService.instance.broadcastProfileUpdate(widget.session.userId, null);
+    unawaited(ApiService(token: widget.session.token).updateProfile(avatar: null));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile picture removed.')),
@@ -564,24 +567,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('AirMail'),
                     subtitle: const Text('Version 1.0.0+1 (Stable)'),
                     onTap: () {
-                      showAboutDialog(
+                      showDialog(
                         context: context,
-                        applicationName: 'AirMail',
-                        applicationVersion: '1.0.0+1',
-                        applicationIcon: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            'assets/images/airmail_logo.png',
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ),
-                        children: const [
-                          Text(
+                          title: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.asset(
+                                  'assets/images/airmail_logo.png',
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.mail),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'AirMail',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Version 1.0.0+1 (Stable)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          content: const Text(
                             'AirMail is a modern, high-performance messaging and WebRTC calling app featuring cross-network audio calls, real-time presence, and interactive games.',
+                            style: TextStyle(fontSize: 14, height: 1.4),
                           ),
-                        ],
+                          actions: [
+                            FilledButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),

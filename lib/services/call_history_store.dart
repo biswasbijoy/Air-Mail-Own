@@ -29,15 +29,7 @@ class CallHistoryStore {
   }
 
   static bool isSameCall(CallRecordModel a, CallRecordModel b) {
-    if (a.id.isNotEmpty && b.id.isNotEmpty && a.id == b.id) return true;
-    final samePeer = (a.peer.id != null && a.peer.id == b.peer.id) ||
-        (a.peer.email != null &&
-            b.peer.email != null &&
-            a.peer.email!.isNotEmpty &&
-            a.peer.email == b.peer.email);
-    if (samePeer && a.createdAt.difference(b.createdAt).abs().inSeconds < 90) {
-      return true;
-    }
+    if (a.id.isNotEmpty && b.id.isNotEmpty) return a.id == b.id;
     return false;
   }
 

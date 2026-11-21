@@ -91,6 +91,10 @@ class RealtimeService {
     _emit('profile_update', {'userId': userId, 'avatar': avatar});
   }
 
+  void syncProfileWithPeer(String receiverId, String avatar) {
+    _emit('peer_profile_sync', {'receiverId': receiverId, 'avatar': avatar});
+  }
+
   void _emit(String event, Map<String, dynamic> data) {
     final socket = _socket;
     if (socket == null || !socket.connected) return;

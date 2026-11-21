@@ -383,6 +383,27 @@ void main() {
     expect(loaded.first.id, 'call-2');
     expect(loaded.last.id, 'call-1');
 
+    // Calling the same peer again creates a new distinct history entry (not replacing)
+    final record3 = CallRecordModel(
+      id: 'call-3',
+      peer: ChatModel(
+        id: 'peer-1',
+        name: 'Bob',
+        email: 'bob@example.com',
+        status: 'online',
+      ),
+      direction: CallDirection.outgoing,
+      status: CallStatus.completed,
+      duration: 45,
+      createdAt: DateTime.now(),
+    );
+    await CallHistoryStore.addRecord(userId, record3);
+    final withRepeatedCall = await CallHistoryStore.load(userId);
+    expect(withRepeatedCall.length, 3);
+    expect(withRepeatedCall[0].id, 'call-3');
+    expect(withRepeatedCall[1].id, 'call-2');
+    expect(withRepeatedCall[2].id, 'call-1');
+
     await CallHistoryStore.clear(userId);
     final cleared = await CallHistoryStore.load(userId);
     expect(cleared, isEmpty);

@@ -216,6 +216,22 @@ class ApiService {
     return data is Map && data['cleared'] == true;
   }
 
+  Future<void> updateProfile({String? avatar}) async {
+    try {
+      await _post('/api/users/profile', {'avatar': avatar ?? ''});
+    } catch (_) {
+      try {
+        await _send(
+          () => http.put(
+            Uri.parse('$baseUrl/api/users/profile'),
+            headers: _headers,
+            body: jsonEncode({'avatar': avatar ?? ''}),
+          ),
+        );
+      } catch (_) {}
+    }
+  }
+
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

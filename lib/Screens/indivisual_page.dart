@@ -9,6 +9,7 @@ import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/services/api_service.dart';
 import 'package:airmail/services/call_history_store.dart';
 import 'package:airmail/services/call_service.dart';
+import 'package:airmail/services/profile_store.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/services/settings_service.dart';
@@ -55,6 +56,12 @@ class _IndivisualPageState extends State<IndivisualPage> {
     _callSubscription =
         RealtimeService.instance.callHistory.listen(_handleIncomingCallRecord);
     _loadMessages();
+
+    final myAvatar = ProfileStore.instance.getAvatar(widget.session.userId);
+    final otherId = _otherUserId;
+    if (myAvatar != null && myAvatar.isNotEmpty && otherId != null) {
+      RealtimeService.instance.syncProfileWithPeer(otherId, myAvatar);
+    }
   }
 
   @override
@@ -184,6 +191,11 @@ class _IndivisualPageState extends State<IndivisualPage> {
         setState(() => _messages.add(message));
       }
       _controller.clear();
+
+      final myAvatar = ProfileStore.instance.getAvatar(widget.session.userId);
+      if (myAvatar != null && myAvatar.isNotEmpty) {
+        RealtimeService.instance.syncProfileWithPeer(otherId, myAvatar);
+      }
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
