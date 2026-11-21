@@ -41,7 +41,12 @@ class CustomCard extends StatelessWidget {
                         backgroundImage: AssetImage(icon),
                       )
                     else
-                      AppAvatar(name: chatModel.name, size: 54, online: isOnline),
+                      AppAvatar(
+                        userId: chatModel.id,
+                        name: chatModel.name,
+                        size: 54,
+                        online: isOnline,
+                      ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(

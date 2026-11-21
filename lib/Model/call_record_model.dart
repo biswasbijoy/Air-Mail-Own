@@ -59,8 +59,10 @@ class CallRecordModel {
     final createdAt = DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
         DateTime.now();
 
+    final idStr = (json['callId'] ?? json['id'] ?? json['_id'])?.toString() ?? '';
+
     return CallRecordModel(
-      id: (json['id'] ?? json['_id'] ?? json['callId'])?.toString() ?? '',
+      id: idStr,
       peer: ChatModel.fromUserJson(rawPeer),
       direction: direction,
       status: status,
@@ -72,6 +74,7 @@ class CallRecordModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'callId': id,
       'peer': {
         'id': peer.id,
         'name': peer.name,

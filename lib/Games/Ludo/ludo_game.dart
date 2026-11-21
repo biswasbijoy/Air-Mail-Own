@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../celebration_dialog.dart';
 import 'ludo_board.dart';
 import 'ludo_dice.dart';
 import 'ludo_models.dart';
 
 class LudoGame extends StatefulWidget {
-  const LudoGame({super.key});
+  final int initialPlayerCount;
+
+  const LudoGame({super.key, this.initialPlayerCount = 4});
 
   @override
   State<LudoGame> createState() => _LudoGameState();
@@ -44,7 +47,7 @@ class _LudoGameState extends State<LudoGame> {
   @override
   void initState() {
     super.initState();
-    _initGame();
+    _initGame(count: widget.initialPlayerCount);
   }
 
   @override
@@ -53,7 +56,10 @@ class _LudoGameState extends State<LudoGame> {
     super.dispose();
   }
 
-  void _initGame() {
+  void _initGame({int? count}) {
+    if (count != null) {
+      _playerCount = count;
+    }
     _autoMoveTimer?.cancel();
     _autoMoveTimer = null;
     _moveSessionId++;
@@ -93,16 +99,6 @@ class _LudoGameState extends State<LudoGame> {
           LudoPlayerColor.blue,
         ];
     }
-  }
-
-  void _changePlayerCount(int count) {
-    if (_isGameRunning || _playerCount == count) return;
-    _autoMoveTimer?.cancel();
-    _autoMoveTimer = null;
-    setState(() {
-      _playerCount = count;
-      _initGame();
-    });
   }
 
   Future<void> _rollDice() async {
@@ -298,46 +294,19 @@ class _LudoGameState extends State<LudoGame> {
   }
 
   void _showWinnerDialog(LudoPlayerColor color) {
-    showDialog(
+    CelebrationDialog.show(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 36),
-              const SizedBox(width: 10),
-              Text(
-                '${color.label} Wins!',
-                style: TextStyle(
-                  color: color.color,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Congratulations to player ${color.label}! All 4 tokens have successfully reached home!',
-            style: const TextStyle(fontSize: 15),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _initGame();
-              },
-              child: const Text('Play Again'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Exit'),
-            ),
-          ],
-        );
+      title: '${color.label} Wins!',
+      message:
+          'Congratulations to player ${color.label}! All 4 tokens have successfully reached home!',
+      primaryColor: color.color,
+      onPlayAgain: () {
+        Navigator.of(context).pop();
+        _initGame();
+      },
+      onExit: () {
+        Navigator.of(context).pop();
+        Navigator.of(context).pop();
       },
     );
   }
@@ -392,24 +361,6 @@ class _LudoGameState extends State<LudoGame> {
       appBar: AppBar(
         title: const Text('Ludo Multiplayer'),
         actions: [
-          PopupMenuButton<int>(
-            tooltip: _isGameRunning
-                ? 'Reset game first to change players'
-                : 'Players mode',
-            icon: Icon(
-              Icons.groups_outlined,
-              color: _isGameRunning
-                  ? Theme.of(context).disabledColor
-                  : null,
-            ),
-            enabled: !_isGameRunning,
-            onSelected: _changePlayerCount,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 2, child: Text('2 Players (Red vs Yellow)')),
-              PopupMenuItem(value: 3, child: Text('3 Players (Red, Green, Yellow)')),
-              PopupMenuItem(value: 4, child: Text('4 Players (All Colors)')),
-            ],
-          ),
           IconButton(
             tooltip: 'Reset game',
             icon: const Icon(Icons.refresh),

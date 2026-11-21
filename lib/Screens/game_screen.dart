@@ -1,4 +1,4 @@
-import 'package:airmail/Games/Ludo/ludo_game.dart';
+import 'package:airmail/Games/Ludo/ludo_player_selection_screen.dart';
 import 'package:airmail/Games/Tic_Tac_Toe/tic_tac_toe.dart';
 import 'package:airmail/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +25,9 @@ class GameScreen extends StatelessWidget {
               badge: 'Popular',
               gradient: AppColors.primaryGradient,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LudoGame()),
+                MaterialPageRoute(
+                  builder: (_) => const LudoPlayerSelectionScreen(),
+                ),
               ),
             ),
             _GameTile(

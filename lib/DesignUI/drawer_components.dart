@@ -1,4 +1,5 @@
 import 'package:airmail/DesignUI/app_avatar.dart';
+import 'package:airmail/Screens/saved_messages_screen.dart';
 import 'package:airmail/Screens/settings_screen.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/services/share_service.dart';
@@ -15,12 +16,6 @@ class DrawerComponent extends StatelessWidget {
 
   final Session session;
   final Future<void> Function() onLogout;
-
-  void _showUnavailable(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature is not available yet.')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +46,7 @@ class DrawerComponent extends StatelessWidget {
             ),
             child: Row(
               children: [
-                AppAvatar(name: session.name, size: 54),
+                AppAvatar(userId: session.userId, name: session.name, size: 54),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -111,7 +106,14 @@ class DrawerComponent extends StatelessWidget {
                   icon: Icons.bookmark_outline_rounded,
                   iconColor: const Color(0xFF0284C7),
                   title: 'Saved messages',
-                  onTap: () => _showUnavailable(context, 'Saved messages'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SavedMessagesScreen(session: session),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 4),
                 _DrawerTile(

@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../DesignUI/app_avatar.dart';
 import '../Screens/login_screen.dart';
 import '../services/api_service.dart';
 import '../services/call_history_store.dart';
+import '../services/profile_store.dart';
 import '../services/realtime_service.dart';
 import '../services/session.dart';
 import '../services/settings_service.dart';
@@ -28,6 +31,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _settings.loadSettings();
+    ProfileStore.instance.init();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    Navigator.of(context).pop();
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final base64String = base64Encode(bytes);
+      await ProfileStore.instance.setAvatar(widget.session.userId, base64String);
+      RealtimeService.instance.broadcastProfileUpdate(widget.session.userId, base64String);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick picture: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    Navigator.of(context).pop();
+    await ProfileStore.instance.setAvatar(widget.session.userId, null);
+    RealtimeService.instance.broadcastProfileUpdate(widget.session.userId, null);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture removed.')),
+      );
+    }
+  }
+
+  void _showPhotoOptions() {
+    final scheme = Theme.of(context).colorScheme;
+    final currentAvatar = ProfileStore.instance.getAvatar(widget.session.userId);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Profile Photo',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () => _pickImage(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take a photo'),
+                onTap: () => _pickImage(ImageSource.camera),
+              ),
+              if (currentAvatar != null && currentAvatar.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                  title: const Text('Remove photo', style: TextStyle(color: Color(0xFFEF4444))),
+                  onTap: _removePhoto,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _copyUserId() {
@@ -209,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([_settings, ThemeController.instance]),
+        listenable: Listenable.merge([_settings, ThemeController.instance, ProfileStore.instance]),
         builder: (context, _) {
           return ListView(
             padding: const EdgeInsets.only(bottom: 32),
@@ -230,10 +328,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        AppAvatar(
-                          name: widget.session.name,
-                          size: 60,
-                          online: isOnline,
+                        GestureDetector(
+                          onTap: _showPhotoOptions,
+                          child: Stack(
+                            children: [
+                              AppAvatar(
+                                userId: widget.session.userId,
+                                name: widget.session.name,
+                                size: 66,
+                                online: isOnline,
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: scheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: scheme.surface,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.2),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -262,35 +394,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              InkWell(
-                                onTap: _copyUserId,
-                                borderRadius: BorderRadius.circular(6),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 2,
+                              Row(
+                                children: [
+                                  InkWell(
+                                    onTap: _copyUserId,
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'ID: ${widget.session.userId.length > 12 ? "${widget.session.userId.substring(0, 10)}..." : widget.session.userId}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontFamily: 'monospace',
+                                              color: scheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.copy,
+                                            size: 13,
+                                            color: scheme.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'ID: ${widget.session.userId.length > 12 ? "${widget.session.userId.substring(0, 10)}..." : widget.session.userId}',
+                                  const SizedBox(width: 12),
+                                  InkWell(
+                                    onTap: _showPhotoOptions,
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
+                                      child: Text(
+                                        'Edit photo',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          fontFamily: 'monospace',
                                           color: scheme.primary,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Icon(
-                                        Icons.copy,
-                                        size: 13,
-                                        color: scheme.primary,
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -391,42 +546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
 
-              // Connection & Diagnostics
-              _buildSectionHeader(context, 'Connection & Diagnostics'),
-              _buildCard(
-                children: [
-                  ListTile(
-                    leading: Icon(
-                      isOnline ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-                      color: isOnline ? const Color(0xFF10B981) : scheme.error,
-                    ),
-                    title: const Text('Socket.IO Gateway'),
-                    subtitle: Text(
-                      isOnline ? 'Connected to live signaling server' : 'Disconnected / Reconnecting',
-                    ),
-                    trailing: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline ? const Color(0xFF10B981) : scheme.error,
-                      ),
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: scheme.outlineVariant.withValues(alpha: 0.2),
-                  ),
-                  const ListTile(
-                    leading: Icon(Icons.network_check_outlined),
-                    title: Text('WebRTC Relay (STUN / TURN)'),
-                    subtitle: Text('Metered.ca TURN & Google STUN enabled for cross-network audio'),
-                  ),
-                ],
-              ),
-
-              // About & Developer
+              // About AirMail
               _buildSectionHeader(context, 'About AirMail'),
               _buildCard(
                 children: [
@@ -476,21 +596,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: const Text('Share invite link and connect with others'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => ShareService.showInviteModal(context, widget.session),
-                  ),
-                  Divider(
-                    height: 1,
-                    indent: 56,
-                    color: scheme.outlineVariant.withValues(alpha: 0.2),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.description_outlined),
-                    title: const Text('Open source licenses'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => showLicensePage(
-                      context: context,
-                      applicationName: 'AirMail',
-                      applicationVersion: '1.0.0+1',
-                    ),
                   ),
                 ],
               ),

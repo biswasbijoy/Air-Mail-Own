@@ -169,42 +169,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'More options',
-            icon: const Icon(Icons.more_vert_rounded),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            onSelected: (value) {
-              if (value == 'new_contact') {
-                _openContactPicker();
-              } else if (value == 'logout') {
-                _logout();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'new_contact',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_add_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('New chat'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
-                    SizedBox(width: 12),
-                    Text('Log out', style: TextStyle(color: Color(0xFFEF4444))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
       body: _pages[_selectedIndex],
       bottomNavigationBar: Container(

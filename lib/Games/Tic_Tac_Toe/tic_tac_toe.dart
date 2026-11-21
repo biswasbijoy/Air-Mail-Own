@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../celebration_dialog.dart';
+
 class TicTacToe extends StatefulWidget {
   const TicTacToe({super.key});
 
@@ -40,6 +42,26 @@ class _TicTacToeState extends State<TicTacToe> {
         } else {
           _oWins += 1;
         }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          CelebrationDialog.show(
+            context: context,
+            title: 'Player $winner Wins!',
+            message:
+                'Outstanding victory! Player $winner connected three in a row!',
+            primaryColor: winner == 'X'
+                ? const Color(0xFF2563EB)
+                : const Color(0xFFEF4444),
+            onPlayAgain: () {
+              Navigator.of(context).pop();
+              _reset();
+            },
+            onExit: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+          );
+        });
       } else if (_board.every((cell) => cell.isNotEmpty)) {
         _isDraw = true;
       } else {

@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:airmail/DesignUI/app_avatar.dart';
 import 'package:airmail/DesignUI/empty_state.dart';
 import 'package:airmail/DesignUI/message_bubble.dart';
+import 'package:airmail/Model/call_record_model.dart';
 import 'package:airmail/Model/chat_model.dart';
 import 'package:airmail/Model/message_model.dart';
 import 'package:airmail/services/api_service.dart';
+import 'package:airmail/services/call_history_store.dart';
 import 'package:airmail/services/call_service.dart';
 import 'package:airmail/services/realtime_service.dart';
 import 'package:airmail/services/session.dart';
@@ -31,7 +33,9 @@ class IndivisualPage extends StatefulWidget {
 class _IndivisualPageState extends State<IndivisualPage> {
   final TextEditingController _controller = TextEditingController();
   final List<MessageModel> _messages = [];
+  final List<CallRecordModel> _callRecords = [];
   StreamSubscription<MessageModel>? _messageSubscription;
+  StreamSubscription<CallRecordModel>? _callSubscription;
   Timer? _typingTimer;
 
   bool _loading = true;
@@ -48,6 +52,8 @@ class _IndivisualPageState extends State<IndivisualPage> {
     _controller.addListener(_handleTextChanged);
     _messageSubscription =
         RealtimeService.instance.messages.listen(_handleIncomingMessage);
+    _callSubscription =
+        RealtimeService.instance.callHistory.listen(_handleIncomingCallRecord);
     _loadMessages();
   }
 
@@ -55,6 +61,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
   void dispose() {
     _stopTyping();
     _messageSubscription?.cancel();
+    _callSubscription?.cancel();
     _controller.removeListener(_handleTextChanged);
     _controller.dispose();
     super.dispose();
@@ -113,11 +120,21 @@ class _IndivisualPageState extends State<IndivisualPage> {
     try {
       final messages =
           await ApiService(token: widget.session.token).fetchMessages(otherId);
+      final cachedCalls = await CallHistoryStore.load(widget.session.userId);
       if (!mounted) return;
       setState(() {
         _messages
           ..clear()
           ..addAll(messages);
+        final peerId = widget.chatModel.id;
+        final peerEmail = widget.chatModel.email;
+        _callRecords
+          ..clear()
+          ..addAll(cachedCalls.where((c) =>
+              (peerId != null && c.peer.id == peerId) ||
+              (peerEmail != null &&
+                  peerEmail.isNotEmpty &&
+                  c.peer.email == peerEmail)));
         _loading = false;
         _error = null;
       });
@@ -200,6 +217,109 @@ class _IndivisualPageState extends State<IndivisualPage> {
     }
   }
 
+  void _handleIncomingCallRecord(CallRecordModel record) {
+    final otherId = _otherUserId;
+    if (!mounted || otherId == null) return;
+    final sameContact = record.peer.id == otherId ||
+        (widget.chatModel.email != null &&
+            record.peer.email == widget.chatModel.email);
+    if (!sameContact) return;
+
+    setState(() {
+      _callRecords.removeWhere((r) => CallHistoryStore.isSameCall(r, record));
+      _callRecords.add(record);
+    });
+  }
+
+  String _formatDuration(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return s > 0 ? '${m}m ${s}s' : '${m}m';
+  }
+
+  Widget _buildCallEventTile(CallRecordModel call) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isOutgoing = call.direction == CallDirection.outgoing;
+    final isMissed = call.status == CallStatus.missed;
+    final isDeclined = call.status == CallStatus.declined;
+    final isCancelled = call.status == CallStatus.cancelled;
+
+    final IconData icon;
+    final Color iconColor;
+    final String title;
+
+    if (isMissed) {
+      icon = Icons.phone_missed_rounded;
+      iconColor = const Color(0xFFEF4444);
+      title = isOutgoing ? 'Cancelled call' : 'Missed audio call';
+    } else if (isDeclined) {
+      icon = Icons.phone_disabled_rounded;
+      iconColor = const Color(0xFFEF4444);
+      title = 'Declined call';
+    } else if (isCancelled) {
+      icon = Icons.call_end_rounded;
+      iconColor = const Color(0xFFEF4444);
+      title = 'Cancelled call';
+    } else {
+      icon = isOutgoing ? Icons.call_made_rounded : Icons.call_received_rounded;
+      iconColor = const Color(0xFF10B981);
+      title = call.duration > 0
+          ? 'Audio call (${_formatDuration(call.duration)})'
+          : 'Audio call';
+    }
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest
+              .withValues(alpha: isDark ? 0.45 : 0.7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: _startCall,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: iconColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isMissed ? const Color(0xFFEF4444) : scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    formatTimestamp(call.createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageList() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -217,20 +337,31 @@ class _IndivisualPageState extends State<IndivisualPage> {
       );
     }
 
-    if (_messages.isEmpty) {
+    // Combine messages and call history into a unified chronological stream
+    final List<_TimelineItem> items = [
+      ..._messages.map((m) => _TimelineItem.message(m)),
+      ..._callRecords.map((c) => _TimelineItem.call(c)),
+    ]..sort((a, b) => a.time.compareTo(b.time));
+
+    if (items.isEmpty) {
       return EmptyState(
         icon: Icons.waving_hand_rounded,
         title: 'Say Hello!',
-        subtitle: 'Start the conversation with ${widget.chatModel.name ?? 'your contact'}.',
+        subtitle:
+            'Start the conversation with ${widget.chatModel.name ?? 'your contact'}.',
       );
     }
 
     return ListView.builder(
       reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: _messages.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final message = _messages[_messages.length - 1 - index];
+        final item = items[items.length - 1 - index];
+        if (item.call != null) {
+          return _buildCallEventTile(item.call!);
+        }
+        final message = item.message!;
         return MessageBubble(
           text: message.message,
           time: formatTimestamp(message.createdAt),
@@ -264,6 +395,7 @@ class _IndivisualPageState extends State<IndivisualPage> {
                 return Row(
                   children: [
                     AppAvatar(
+                      userId: widget.chatModel.id,
                       name: widget.chatModel.name,
                       size: 40,
                       online: online,
@@ -443,4 +575,18 @@ class _IndivisualPageState extends State<IndivisualPage> {
       ),
     );
   }
+}
+
+class _TimelineItem {
+  final MessageModel? message;
+  final CallRecordModel? call;
+  final DateTime time;
+
+  _TimelineItem.message(this.message)
+      : call = null,
+        time = message!.createdAt;
+
+  _TimelineItem.call(this.call)
+      : message = null,
+        time = call!.createdAt;
 }

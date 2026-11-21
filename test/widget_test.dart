@@ -3,6 +3,7 @@ import 'package:airmail/Games/Ludo/ludo_board.dart';
 import 'package:airmail/Games/Ludo/ludo_dice.dart';
 import 'package:airmail/Games/Ludo/ludo_game.dart';
 import 'package:airmail/Games/Ludo/ludo_models.dart';
+import 'package:airmail/Games/Ludo/ludo_player_selection_screen.dart';
 import 'package:airmail/Model/call_event.dart';
 import 'package:airmail/Model/call_record_model.dart';
 import 'package:airmail/Model/chat_model.dart';
@@ -15,6 +16,7 @@ import 'package:airmail/main.dart';
 import 'package:airmail/services/api_service.dart';
 import 'package:airmail/services/call_history_store.dart';
 import 'package:airmail/services/realtime_service.dart';
+import 'package:airmail/services/saved_messages_store.dart';
 import 'package:airmail/services/session.dart';
 import 'package:airmail/services/settings_service.dart';
 import 'package:airmail/services/share_service.dart';
@@ -551,11 +553,38 @@ void main() {
     expect(LudoConstants.getTokenPosition(LudoToken(id: 0, color: LudoPlayerColor.blue, step: 0)), const GridPos(13, 6));
   });
 
+  testWidgets('LudoPlayerSelectionScreen allows selecting players and starting game',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LudoPlayerSelectionScreen(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Choose Players'), findsOneWidget);
+    expect(find.text('2 Players'), findsOneWidget);
+    expect(find.text('3 Players'), findsOneWidget);
+    expect(find.text('4 Players'), findsOneWidget);
+    expect(find.text('Start Game'), findsOneWidget);
+
+    // Tap on 2 Players
+    await tester.tap(find.text('2 Players'));
+    await tester.pumpAndSettle();
+
+    // Tap Start Game -> navigates to LudoGame
+    await tester.tap(find.text('Start Game'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ludo Multiplayer'), findsOneWidget);
+    expect(find.text("Red's Turn"), findsOneWidget);
+  });
+
   testWidgets('LudoGame renders board, dice, and turn card',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: LudoGame(),
+        home: LudoGame(initialPlayerCount: 4),
       ),
     );
     await tester.pump();
@@ -566,18 +595,10 @@ void main() {
     expect(find.text('4 / 4 Home'), findsNothing); // 0/4 home initially
     expect(find.text('0 / 4 Home'), findsNWidgets(4));
 
-    // Check player mode menu button is enabled before game starts
-    final popupBeforeRoll = tester.widget<PopupMenuButton<int>>(find.byType(PopupMenuButton<int>));
-    expect(popupBeforeRoll.enabled, isTrue);
-
     // Tap dice to test rolling interaction
     await tester.tap(find.byType(LudoDice));
     await tester.pump();
     expect(find.text("Red is rolling..."), findsOneWidget);
-
-    // Player mode menu button is disabled while game is running
-    final popupDuringRoll = tester.widget<PopupMenuButton<int>>(find.byType(PopupMenuButton<int>));
-    expect(popupDuringRoll.enabled, isFalse);
 
     // Complete roll animation
     await tester.pump(const Duration(milliseconds: 700));
@@ -601,9 +622,7 @@ void main() {
     await tester.tap(find.text('Reset'));
     await tester.pumpAndSettle();
 
-    // After reset, player mode menu button is re-enabled
-    final popupAfterReset = tester.widget<PopupMenuButton<int>>(find.byType(PopupMenuButton<int>));
-    expect(popupAfterReset.enabled, isTrue);
+    expect(find.text("Red's Turn"), findsOneWidget);
   });
 
   testWidgets('LudoBoard supports movingToken jump rendering with AnimatedPositioned and faded glowing',
@@ -645,5 +664,27 @@ void main() {
     expect(find.text('Tic Tac Toe'), findsOneWidget);
     expect(find.text('Rock Paper Scissors'), findsNothing);
     expect(find.text('Color Guess'), findsNothing);
+  });
+
+  test('SavedMessagesStore saves, loads, and manages saved messages', () async {
+    const userId = 'user_test_999';
+    final store = SavedMessagesStore.instance;
+
+    await store.load(userId);
+    expect(store.messages, isEmpty);
+
+    final msg1 = await store.add(userId, 'Meeting notes at 5pm');
+    expect(msg1.text, 'Meeting notes at 5pm');
+    expect(store.messages.length, 1);
+
+    final msg2 = await store.add(userId, 'Important bookmark: https://example.com');
+    expect(store.messages.length, 2);
+
+    await store.remove(userId, msg1.id);
+    expect(store.messages.length, 1);
+    expect(store.messages.first.id, msg2.id);
+
+    await store.clear(userId);
+    expect(store.messages, isEmpty);
   });
 }

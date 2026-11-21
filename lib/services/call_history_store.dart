@@ -28,17 +28,36 @@ class CallHistoryStore {
     }
   }
 
+  static bool isSameCall(CallRecordModel a, CallRecordModel b) {
+    if (a.id.isNotEmpty && b.id.isNotEmpty && a.id == b.id) return true;
+    final samePeer = (a.peer.id != null && a.peer.id == b.peer.id) ||
+        (a.peer.email != null &&
+            b.peer.email != null &&
+            a.peer.email!.isNotEmpty &&
+            a.peer.email == b.peer.email);
+    if (samePeer && a.createdAt.difference(b.createdAt).abs().inSeconds < 90) {
+      return true;
+    }
+    return false;
+  }
+
   static Future<void> save(String? userId, List<CallRecordModel> records) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final toSave = records.take(100).map((r) => r.toJson()).toList();
+      final List<CallRecordModel> deduplicated = [];
+      for (final r in records) {
+        if (!deduplicated.any((existing) => isSameCall(existing, r))) {
+          deduplicated.add(r);
+        }
+      }
+      final toSave = deduplicated.take(100).map((r) => r.toJson()).toList();
       await prefs.setString(_key(userId), jsonEncode(toSave));
     } catch (_) {}
   }
 
   static Future<void> addRecord(String? userId, CallRecordModel record) async {
     final existing = await load(userId);
-    existing.removeWhere((r) => r.id == record.id && r.id.isNotEmpty);
+    existing.removeWhere((r) => isSameCall(r, record));
     existing.insert(0, record);
     await save(userId, existing);
   }

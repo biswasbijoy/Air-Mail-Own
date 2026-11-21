@@ -47,7 +47,7 @@ class CallScreenState extends State<CallScreen> {
   void _handleNewCallRecord(CallRecordModel record) {
     if (!mounted) return;
     setState(() {
-      _records.removeWhere((r) => r.id == record.id && r.id.isNotEmpty);
+      _records.removeWhere((r) => CallHistoryStore.isSameCall(r, record));
       _records.insert(0, record);
     });
   }
@@ -72,27 +72,28 @@ class CallScreenState extends State<CallScreen> {
           .fetchCallHistory();
       if (!mounted) return;
 
-      // Merge remote with any un-synced local records
-      final Map<String, CallRecordModel> merged = {};
+      // Merge remote with any un-synced local records with strict deduplication
+      final List<CallRecordModel> combinedList = [];
       for (final r in remote) {
-        if (r.id.isNotEmpty) merged[r.id] = r;
+        if (!combinedList.any((existing) => CallHistoryStore.isSameCall(existing, r))) {
+          combinedList.add(r);
+        }
       }
       for (final r in cached) {
-        if (r.id.isNotEmpty && !merged.containsKey(r.id)) {
-          merged[r.id] = r;
+        if (!combinedList.any((existing) => CallHistoryStore.isSameCall(existing, r))) {
+          combinedList.add(r);
         }
       }
 
-      final combined = merged.values.toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      combinedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      await CallHistoryStore.save(widget.session.userId, combined);
+      await CallHistoryStore.save(widget.session.userId, combinedList);
 
       if (!mounted) return;
       setState(() {
         _records
           ..clear()
-          ..addAll(combined);
+          ..addAll(combinedList);
         _loading = false;
         _error = null;
       });
@@ -234,6 +235,7 @@ class CallScreenState extends State<CallScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             leading: AppAvatar(
+              userId: record.peer.id,
               name: peerName,
               size: 50,
               online: RealtimeService.instance.isOnline(record.peer.id),

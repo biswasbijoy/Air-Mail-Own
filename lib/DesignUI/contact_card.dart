@@ -35,7 +35,12 @@ class ContactCard extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
           leading: icon != null && icon.isNotEmpty
               ? CircleAvatar(radius: 26, backgroundImage: AssetImage(icon))
-              : AppAvatar(name: contact.name, size: 52, online: isOnline),
+              : AppAvatar(
+                  userId: contact.id,
+                  name: contact.name,
+                  size: 52,
+                  online: isOnline,
+                ),
           title: Text(
             contact.name ?? 'Unknown',
             style: TextStyle(
@@ -78,33 +83,14 @@ class ContactCard extends StatelessWidget {
                     ),
                   ),
                   if (onRemove != null)
-                    PopupMenuButton<String>(
-                      tooltip: 'Contact options',
-                      icon: Icon(
-                        Icons.more_vert_rounded,
+                    IconButton(
+                      tooltip: 'Remove contact',
+                      icon: const Icon(
+                        Icons.person_remove_outlined,
                         size: 20,
-                        color: scheme.onSurfaceVariant,
+                        color: Color(0xFFEF4444),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'remove') onRemove!();
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem<String>(
-                          value: 'remove',
-                          child: Row(
-                            children: [
-                              Icon(Icons.person_remove_outlined,
-                                  size: 18, color: Color(0xFFEF4444)),
-                              SizedBox(width: 10),
-                              Text('Remove contact',
-                                  style: TextStyle(color: Color(0xFFEF4444))),
-                            ],
-                          ),
-                        ),
-                      ],
+                      onPressed: onRemove,
                     ),
                 ],
               ),

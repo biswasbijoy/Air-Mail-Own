@@ -581,6 +581,13 @@ class CallService extends ChangeNotifier {
     final error = _lastError;
     final userId = currentUserId;
 
+    // Immediately clear call identifiers to prevent duplicate teardown / records
+    _callId = null;
+    _peer = null;
+    _isCaller = false;
+    _state = CallState.idle;
+    _connectedAt = null;
+
     if (peer != null && callId != null && callId.isNotEmpty) {
       final CallStatus status;
       if (connectedAt != null) {
@@ -614,10 +621,6 @@ class CallService extends ChangeNotifier {
       RealtimeService.instance.notifyCallHistory(record);
     }
 
-    _callId = null;
-    _isCaller = false;
-    _state = CallState.idle;
-    _connectedAt = null;
     _muted = false;
     _speakerOn = false;
     _remoteDescriptionSet = false;

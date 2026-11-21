@@ -8,6 +8,7 @@ import '../Model/call_record_model.dart';
 import '../Model/chat_model.dart';
 import '../Model/message_model.dart';
 import 'api_service.dart';
+import 'profile_store.dart';
 import 'session.dart';
 
 class RealtimeService {
@@ -84,6 +85,10 @@ class RealtimeService {
 
   void sendCallSignal(String callId, Map<String, dynamic> data) {
     _emit('webrtc_signal', {'callId': callId, 'data': data});
+  }
+
+  void broadcastProfileUpdate(String userId, String? avatar) {
+    _emit('profile_update', {'userId': userId, 'avatar': avatar});
   }
 
   void _emit(String event, Map<String, dynamic> data) {
@@ -271,6 +276,15 @@ class RealtimeService {
 
     socket.on('webrtc_signal', (data) {
       _handleCallSocketEvent('webrtc_signal', data);
+    });
+
+    socket.on('profile_updated', (data) {
+      if (data is! Map) return;
+      final userId = data['userId']?.toString();
+      final avatar = data['avatar']?.toString();
+      if (userId != null && userId.isNotEmpty) {
+        ProfileStore.instance.setAvatar(userId, avatar);
+      }
     });
 
     socket.on('call_history_item', (data) {

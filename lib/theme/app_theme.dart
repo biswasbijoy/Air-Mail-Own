@@ -179,6 +179,21 @@ class AppTheme {
           contentTextStyle: const TextStyle(color: AppColors.darkText),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return const Color(0xFFE2E8F0);
+          }),
+          trackColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return AppColors.primary;
+            }
+            return const Color(0xFF334155);
+          }),
+          trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+        ),
       );
 
   static ThemeData get light => ThemeData(
@@ -354,6 +369,21 @@ class AppTheme {
           backgroundColor: AppColors.lightRaised,
           contentTextStyle: const TextStyle(color: AppColors.lightText),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return Colors.white;
+          }),
+          trackColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return AppColors.primary;
+            }
+            return const Color(0xFFCBD5E1);
+          }),
+          trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
         ),
       );
 }
